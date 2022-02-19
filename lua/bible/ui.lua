@@ -1,18 +1,6 @@
 local buf, win, start_win
 
 local function open()
-  local path = vim.api.nvim_get_current_line()
-
-  if vim.api.nvim_win_is_valid(start_win) then
-    vim.api.nvim_set_current_win(start_win)
-    vim.api.nvim_command('edit ' .. path)
-  else
-    vim.api.nvim_command('leftabove vsplit ' .. path)
-    start_win = vim.api.nvim_get_current_win()
-  end
-end
-
-local function open()
   -- We get path from line which user push enter on
   local path = vim.api.nvim_get_current_line()
 
@@ -116,13 +104,13 @@ end
 local function set_mappings()
   -- set mapping to the current buffer
   local mappings = {
-    q = 'close()',
+    -- q = 'close()',
     ['<c-c>'] = 'close()',
-    ['<cr>'] = 'open_and_close()',
-    v = 'split("v")',
-    s = 'split("")',
-    p = 'preview()',
-    t = 'open_in_tab()'
+    -- ['<cr>'] = 'open_and_close()',
+    -- v = 'split("v")',
+    -- s = 'split("")',
+    -- p = 'preview()',
+    -- t = 'open_in_tab()'
   }
 
   for k,v in pairs(mappings) do
@@ -165,56 +153,10 @@ local function create_ephem_win()
 
   -- For better UX we will turn off line wrap and turn on current line highlight.
   vim.api.nvim_win_set_option(win, 'wrap', true)
+
   vim.api.nvim_win_set_option(win, 'cursorline', true)
 
-  set_mappings() -- At end we will set mappings for our navigation.
-end
-
-local function create_win(filepath)
-  -- We save handle to window from which we open the navigation
-  start_win = vim.api.nvim_get_current_win()
-
-  vim.api.nvim_command('botright 85vnew '..filepath) -- We open a new vertical window at the far right
-  win = vim.api.nvim_get_current_win() -- We save our navigation window handle...
-  buf = vim.api.nvim_get_current_buf() -- ...and it's buffer handle.
-
-  -- We should name our buffer. All buffers in vim must have unique names.
-  -- The easiest solution will be adding buffer handle to it
-  -- because it is already unique and it's just a number.
-  -- vim.api.nvim_buf_set_name(buf, 'journal #' .. buf)
-
-  -- Now we set some options for our buffer.
-  -- nofile prevent mark buffer as modified so we never get warnings about not saved changes.
-  -- Also some plugins treat nofile buffers different.
-  -- For example coc.nvim don't triggers aoutcompletation for these.
-  -- vim.api.nvim_buf_set_option(buf, 'buftype', 'nofile')
-
-  -- We do not need swapfile for this buffer.
-  vim.api.nvim_buf_set_option(buf, 'swapfile', false)
-
-  -- And we would rather prefer that this buffer will be destroyed when hide.
-  vim.api.nvim_buf_set_option(buf, 'bufhidden', 'wipe')
-
-  -- It's not necessary but it is good practice to set custom filetype.
-  -- This allows users to create their own autocommand or colorschemes on filetype.
-  -- and prevent collisions with other plugins.
-  -- vim.api.nvim_buf_set_option(buf, 'filetype', 'journalft')
-
-  -- For better UX we will turn off line wrap and turn on current line highlight.
-  vim.api.nvim_win_set_option(win, 'wrap', false)
-  vim.api.nvim_win_set_option(win, 'cursorline', true)
-
-  set_mappings() -- At end we will set mappings for our navigation.
-end
-
-local function entry(filepath)
-  if win and vim.api.nvim_win_is_valid(win) then
-    vim.api.nvim_set_current_win(win)
-  else
-    create_win(filepath)
-  end
-  -- redraw()
-  return buf, win
+  -- set_mappings() -- At end we will set mappings for our navigation.
 end
 
 local function ephemeral_entry(content, opts)
@@ -227,7 +169,6 @@ local function ephemeral_entry(content, opts)
 end
 
 return {
-  entry = entry,
   ephemeral_entry = ephemeral_entry,
   close = close,
   open_and_close = open_and_close,

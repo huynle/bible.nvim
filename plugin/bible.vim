@@ -8,8 +8,8 @@ if exists('g:loaded_bible') | finish | endif
 " hi def link bibleHeader      Number
 " hi def link bibleSubHeader   Identifier
 
-command! BibleInit lua require'bible'
-" lua require'bible'
+" command! BibleInit lua require'bible'
+lua require'bible'
 
 " let &cpo = s:save_cpo
 " unlet s:save_cpo
