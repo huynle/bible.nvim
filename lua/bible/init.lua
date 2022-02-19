@@ -1,19 +1,21 @@
 local dev = require("hle.util.dev")
 local config = require("bible.config")
 
-local M = {}
 local keymap_opts = { noremap = true, silent = true }
+
+local M = {}
+-- default options
 
 function M.setup(bible_opts, ui_opts)
   dev.unload_packages("bible")
 
   config.options = vim.tbl_extend("force", config.defaults, ui_opts)
   
-  local picker = require("bible.pickers."..config.options.picker)
-  picker.options = vim.tbl_extend("force", picker.defaults, bible_opts)
+  local scraper = require("bible.scrapers."..config.options.scraper)
+  scraper.options = vim.tbl_extend("force", scraper.defaults, bible_opts)
 
   require("bible.commands.builtin")
-  print("sourced")
+  print("sourced bible")
 end
 
 function M.enable_mapping()
@@ -25,7 +27,7 @@ function M.enable_mapping()
   vim.api.nvim_set_keymap("n", "<leader>bfv", "<Cmd>BibleLookup { query = vim.fn.input('Search: ') , version='NVB'}<CR>", keymap_opts)
   vim.api.nvim_set_keymap("n", "<leader>bf", "<Cmd>BibleLookup { query = vim.fn.input('Search: ')}<CR>", keymap_opts)
 
-  vim.api.nvim_set_keymap("n", "<leader>R", "<cmd>source ~/.config/nvim/lua/bible/init.lua<CR>", keymap_opts)
+  vim.api.nvim_set_keymap("n", "<leader>R", "<cmd>source ~/projects/bible.nvim/lua/bible/init.lua<CR>", keymap_opts)
 end
 
 

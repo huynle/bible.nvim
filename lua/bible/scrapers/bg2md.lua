@@ -35,7 +35,7 @@ local function clean_line(line)
   return line:gsub("%s+$", "")
 end
 
-function M:lookup_verse(options, cb)
+function M:lookup_verse(cb, options)
   local options = vim.tbl_extend("force", M.defaults, options)
   local args = create_params(options)
   local result = vim.fn.systemlist('bg2md '..args.." '"..options.query.."'")
@@ -47,7 +47,7 @@ function M:lookup_verse(options, cb)
     cleaned[#cleaned+1] = clean_line(line)
   end
 
-  cb(cleaned)
+  cb(cleaned, options)
 end
 
 return M

@@ -2,9 +2,9 @@ local M = {}
 
 -- default options
 M.defaults = {
-  picker = "bg2md",
+  scraper = "bg2md",
   display = true,
-  picker_options = nil,
+  scraper_options = nil,
 }
 
 
