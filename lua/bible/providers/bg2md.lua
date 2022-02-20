@@ -2,7 +2,7 @@ local M = {}
 
 -- default options
 -- good for bible study
-M.defaults = {
+local defaults = {
   boldwords = true,
   x_copyright = true,
   x_headers = false,
@@ -14,8 +14,12 @@ M.defaults = {
   query = ""
 }
 
+M.options = {}
 
-M.options = M.defaults -- not necessary, but better code completion
+
+function M.setup(options)
+  M.options = vim.tbl_deep_extend("force", {}, defaults, options or {})
+end
 
 local function create_params(options)
   local out = {}
@@ -36,7 +40,7 @@ local function clean_line(line)
 end
 
 function M:lookup_verse(cb, options)
-  local options = vim.tbl_extend("force", M.defaults, options)
+  local options = vim.tbl_extend("force", defaults, options)
   local args = create_params(options)
   local result = vim.fn.systemlist('bg2md '..args.." '"..options.query.."'")
 
