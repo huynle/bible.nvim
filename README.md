@@ -1,4 +1,4 @@
-# Bible
+# Bible.nvim
 a neovim plugin that helps you study your bible a little more effectively.
 
 It does so by using [bg2md.rb](https://github.com/jgclark/BibleGateway-to-Markdown) as the default provider.

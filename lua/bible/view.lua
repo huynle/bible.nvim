@@ -7,6 +7,8 @@ M.defaults = {
   bufname = "bible #"
 }
 
+
+
 M.options = M.defaults -- not necessary, but better code completion
 
 function M.open()
