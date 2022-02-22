@@ -1,11 +1,15 @@
 local config = require("bible.config")
+local util = require("bible.util")
+local log = require("bible.util.log")
+local bg2md = require("bible.providers.bg2md")
 
 local M = {}
 
--- default options
-M.defaults = {
-  provider = "bg2md"
+M.providers = {
+  NABRE = bg2md,
 }
+
+
 
 M.options = {}
 
@@ -26,7 +30,22 @@ end
 -- Must implement these functions
 function M:lookup_verse(cb, options)
   local provider = M.get_provider(options)
-  provider:lookup_verse(cb, options)
+  local queries = util.splitStr(options.query, {sep = ";"})
+
+  local ordered_keys = {}
+
+  for k in pairs(queries) do
+    table.insert(ordered_keys, k)
+  end
+
+  table.sort(ordered_keys)
+  local verses = {}
+  for i = 1, #ordered_keys do
+    local k, v = ordered_keys[i], queries[ ordered_keys[i] ]
+    options.query = v
+    verses[v] = provider:lookup_verse(options)
+    cb(verses[v], options)
+  end
 end
 
 return M

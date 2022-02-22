@@ -23,7 +23,7 @@ function M.enable_mapping()
   -- vim.api.nvim_set_keymap("n", "<leader>bs", "<cmd>BibleLookupWORD { provider='bg2md' }<CR>", keymap_opts)
   vim.api.nvim_set_keymap("n", "<leader>bs", "<cmd>BibleLookupWORD<CR>", keymap_opts)
   -- vietnamese version
-  vim.api.nvim_set_keymap("n", "<leader>bfv", "<Cmd>BibleLookup { query = vim.fn.input('Search: ') , version='NVB'}<CR>", keymap_opts)
+  vim.api.nvim_set_keymap("n", "<leader>bv", "<Cmd>BibleLookup { query = vim.fn.input('Search: ') , version='NVB'}<CR>", keymap_opts)
   vim.api.nvim_set_keymap("n", "<leader>bf", "<Cmd>BibleLookup { query = vim.fn.input('Search: ')}<CR>", keymap_opts)
 
   vim.api.nvim_set_keymap("n", "<leader>R", "<cmd>source ~/projects/bible.nvim/lua/bible/init.lua<CR>", keymap_opts)

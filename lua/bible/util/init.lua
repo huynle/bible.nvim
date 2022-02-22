@@ -1,3 +1,5 @@
+local config = require("bible.config")
+
 local M = {}
 
 ---Finds the root directory of the notebook of the given path
@@ -104,9 +106,44 @@ function M.error(msg)
 end
 
 function M.debug(msg)
-  if config.options.debug then
+  if config.debug then
     vim.notify(msg, vim.log.levels.DEBUG, { title = "Trouble" })
   end
+end
+
+
+function M.splitStr (inputstr, opts)
+  opts = vim.tbl_deep_extend("force", {
+    sep = "%s",
+    clean_before = true,
+    clean_after = true,
+  }, opts)
+  -- return an ordered table, or key and its index
+  local t={}
+  for str in string.gmatch(inputstr, "([^"..opts.sep.."]+)") do
+    str = M.cleanStr(str, opts)
+    if str ~= "" then
+      t[#t+1] = str
+    end
+  end
+  return t
+end
+
+function M.cleanStr(line, opts)
+  opts = vim.tbl_deep_extend("force", {
+    clean_before = false,
+    clean_after = true,
+  }, opts)
+
+  if opts.clean_before then
+    line = line:gsub("^%s+", "")
+  end
+
+  if opts.clean_after then
+    line = line:gsub("%s+$", "")
+  end
+  -- strip ending spaces from line
+  return line
 end
 
 

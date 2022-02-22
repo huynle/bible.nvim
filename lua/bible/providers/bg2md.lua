@@ -39,19 +39,19 @@ local function clean_line(line)
   return line:gsub("%s+$", "")
 end
 
-function M:lookup_verse(cb, options)
+function M:lookup_verse(options)
+
   local options = vim.tbl_extend("force", defaults, options)
   local args = create_params(options)
   local result = vim.fn.systemlist('bg2md '..args.." '"..options.query.."'")
 
   local cleaned = {}
   for _, line in ipairs(result) do
-    -- assert( not string.find(string.lower(line), ".*error.*"), "Could not find verse "..line)
     assert( not string.find(line, "Error:"), "Could not find verse "..line)
     cleaned[#cleaned+1] = clean_line(line)
   end
 
-  cb(cleaned, options)
+  return cleaned
 end
 
 return M
