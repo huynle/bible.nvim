@@ -84,13 +84,13 @@ function View:set_option(name, value, win)
   end
 end
 
----@param text Text
-function View:render(text)
+---@param verse Verse
+function View:render(verse)
   self:unlock()
-  self:set_lines(text.lines)
+  self:set_lines(verse.lines)
   self:lock()
   clear_hl(self.buf)
-  for _, data in ipairs(text.hl) do
+  for _, data in ipairs(verse.hl) do
     highlight(self.buf, config.namespace, data.group, data.line, data.from, data.to)
   end
 end
@@ -171,17 +171,17 @@ function View:setup(opts)
     vim.api.nvim_win_set_width(self.win, config.options.width)
   end
 
-  vim.api.nvim_exec(
-    [[
-      augroup BibleHighlights
-        autocmd! * <buffer>
-        autocmd BufEnter <buffer> lua require("bible").action("on_enter")
-        autocmd CursorMoved <buffer> lua require("bible").action("auto_preview")
-        autocmd BufLeave <buffer> lua require("bible").action("on_leave")
-      augroup END
-    ]],
-    false
-  )
+  -- vim.api.nvim_exec(
+  --   [[
+  --     augroup BibleHighlights
+  --       autocmd! * <buffer>
+  --       autocmd BufEnter <buffer> lua require("bible").action("on_enter")
+  --       autocmd CursorMoved <buffer> lua require("bible").action("auto_preview")
+  --       autocmd BufLeave <buffer> lua require("bible").action("on_leave")
+  --     augroup END
+  --   ]],
+  --   false
+  -- )
 
   if not opts.parent then
     self:on_enter()
@@ -406,16 +406,16 @@ end
 function View:hover(opts)
   opts = opts or {}
   local item = opts.item or self:current_item()
-  if not (item and item.full_text) then
+  if not (item and item.full_verse) then
     return
   end
 
   local lines = {}
-  for line in item.full_text:gmatch("([^\n]*)\n?") do
+  for line in item.full_verse:gmatch("([^\n]*)\n?") do
     table.insert(lines, line)
   end
 
-  vim.lsp.util.open_floating_preview(lines, "plaintext", { border = "single" })
+  vim.lsp.util.open_floating_preview(lines, "plainverse", { border = "single" })
 end
 
 function View:jump(opts)
