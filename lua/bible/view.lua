@@ -22,7 +22,7 @@ local hl_bufs = {}
 
 local function clear_hl(bufnr)
   if vim.api.nvim_buf_is_valid(bufnr) then
-    vim.api.nvim_buf_clear_namespace(bufnr, config.namespace, 0, -1)
+    -- vim.api.nvim_buf_clear_namespace(bufnr, config.namespace, 0, -1)
   end
 end
 
@@ -120,12 +120,12 @@ function View:is_valid()
   return vim.api.nvim_buf_is_valid(self.buf) and vim.api.nvim_buf_is_loaded(self.buf)
 end
 
-function View:update(opts)
+function View:update(query, opts)
   util.debug("update")
-  renderer.render(self, opts)
+  renderer.render(self, query, opts)
 end
 
-function View:setup(opts)
+function View:setup(query, opts)
   util.debug("setup")
   opts = opts or {}
   vim.cmd("setlocal nonu")
@@ -171,23 +171,23 @@ function View:setup(opts)
     vim.api.nvim_win_set_width(self.win, config.options.width)
   end
 
-  -- vim.api.nvim_exec(
-  --   [[
-  --     augroup BibleHighlights
-  --       autocmd! * <buffer>
-  --       autocmd BufEnter <buffer> lua require("bible").action("on_enter")
-  --       autocmd CursorMoved <buffer> lua require("bible").action("auto_preview")
-  --       autocmd BufLeave <buffer> lua require("bible").action("on_leave")
-  --     augroup END
-  --   ]],
-  --   false
-  -- )
+  vim.api.nvim_exec(
+    [[
+      augroup BibleHighlights
+        autocmd! * <buffer>
+        autocmd BufEnter <buffer> lua require("bible").action("on_enter")
+        autocmd CursorMoved <buffer> lua require("bible").action("auto_preview")
+        autocmd BufLeave <buffer> lua require("bible").action("on_leave")
+      augroup END
+    ]],
+    false
+  )
 
   if not opts.parent then
     self:on_enter()
   end
   self:lock()
-  self:update(opts)
+  self:update(query, opts)
 end
 
 function View:on_enter()
@@ -340,20 +340,20 @@ function View:close()
   end
 end
 
-function View.create(opts)
-  opts = opts or {}
-  if opts.win then
-    View.switch_to(opts.win)
+function View.create(query, options)
+  options = options or {}
+  if options.win then
+    View.switch_to(options.win)
     vim.cmd("enew")
   else
     vim.cmd("below new")
     local pos = { bottom = "J", top = "K", left = "H", right = "L" }
     vim.cmd("wincmd " .. (pos[config.options.position] or "K"))
   end
-  local buffer = View:new(opts)
-  buffer:setup(opts)
+  local buffer = View:new(options)
+  buffer:setup(query, options)
 
-  if opts and opts.auto then
+  if options and options.auto then
     buffer:switch_to_parent()
   end
   return buffer

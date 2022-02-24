@@ -15,6 +15,7 @@ end
 -- display the verse in an ephemeral window 
 function M.display_verse_new(lines, options)
   local options = vim.tbl_extend("force", M.options, options)
+  -- dump(options)
   local view = View.create(options)
   -- dump(view)
   -- view_og.ephemeral_entry(lines, options)

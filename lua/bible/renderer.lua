@@ -1,6 +1,7 @@
 local util = require("bible.util")
 local providers = require("bible.providers")
 local config = require("bible.config")
+local Verse = require("bible.verse")
 
 local renderer = {}
 
@@ -38,12 +39,40 @@ function renderer.render_file(view, verse, filename, items)
 end
 
 ---@param view BibleView
-function renderer.render(view, opts)
+function renderer.render(view, query, opts)
   opts = opts or {}
   local buf = vim.api.nvim_win_get_buf(view.parent)
-  providers.get(view.parent, buf, function(verses)
+  providers:get(view.parent, buf, function(verses)
+    -- FIXME: working on group!
+    -- local grouped = providers:group(verses)
+    -- local count = util.count(grouped)
+
+    -- check for auto close
+    if opts.auto and config.options.auto_close then
+      if util.tablelength(verses) == 0 then
+        view:close()
+        return
+      end
+    end
+
+    if util.tablelength(verses) == 0 then
+      util.warn("no results")
+    end
+
+    -- dump(verses)
     local verse = Verse:new()
     view.items = {}
+
+    if config.options.padding then
+      verse:nl()
+    end
+
+    for k, v in pairs(verses) do
+      verse:render(k)
+      verse:nl()
+    end
+
+    view:render(verse)
 
     -- if config.options.padding then
     --   verse:nl()
@@ -54,7 +83,7 @@ function renderer.render(view, opts)
     --   view:focus()
     -- end
 
-  end, config.options)
+  end, query)
 end
 
 

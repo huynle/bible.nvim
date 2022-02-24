@@ -48,17 +48,22 @@ function M:lookup_verse(cb, options)
   for i = 1, #ordered_keys do
     local k, v = ordered_keys[i], queries[ ordered_keys[i] ]
     options.query = v
-    verses[v] = provider:lookup_verse(options)
+    verses[v] = provider:lookup_verse(v, options)
     cb(verses[v], options)
   end
 end
 
 ---@param options BibleOptions
-function M:get(win, buf, cb, options)
-  local name = options.mode
-  local provider = M.providers[name]
+-- function M:get(query_opts, view)
+function M:get(win, buf, cb, query_opts)
+  -- local options = vim.tbl_extend("force", config.options, options or {})
 
-  local queries = util.splitStr(options.query, {sep = ";"})
+  -- local name = options.mode
+  local provider = M.get_provider()
+
+  local queries = util.splitStr(query_opts.query, {sep = ";"})
+  -- local verse = Verse:new()
+
   local ordered_keys = {}
 
   for k in pairs(queries) do
@@ -69,12 +74,36 @@ function M:get(win, buf, cb, options)
   local verses = {}
   for i = 1, #ordered_keys do
     local k, v = ordered_keys[i], queries[ ordered_keys[i] ]
-    options.query = v
-    verses[v] = provider:lookup_verse(options)
+    verses[v] = provider:lookup_verse(v, query_opts)
+    -- view:render(verse:render(v))
+  end
+  cb(verses)
+end
+
+
+function M:group(items)
+  -- grouping -- maybe for chapter
+  local keys = {}
+  local keyid = 0
+  local groups = {}
+  -- for _, item in ipairs(items) do
+  for k, v in pairs(items) do
+    if groups[item.filename] == nil then
+      groups[item.filename] = { filename = item.filename, items = {} }
+      keys[item.filename] = keyid
+      keyid = keyid + 1
+    end
+    table.insert(groups[item.filename].items, item)
   end
 
-  cb(verses, options)
-
+  local ret = {}
+  for _, group in pairs(groups) do
+    table.insert(ret, group)
+  end
+  table.sort(ret, function(a, b)
+    return keys[a.filename] < keys[b.filename]
+  end)
+  return ret
 end
 
 
