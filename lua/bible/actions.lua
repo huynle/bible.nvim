@@ -6,13 +6,13 @@ local M = {}
 M.defaults = {}
 M.options = M.defaults -- not necessary, but better code completion
 
--- display the verse in an ephemeral window 
+-- display the verse in an ephemeral window
 function M.display_verse(lines, options)
   local options = vim.tbl_extend("force", M.options, options)
   view_og.ephemeral_entry(lines, options)
 end
 
--- display the verse in an ephemeral window 
+-- display the verse in an ephemeral window
 function M.display_verse_new(lines, options)
   local options = vim.tbl_extend("force", M.options, options)
   -- dump(options)

@@ -34,6 +34,12 @@ local function is_open()
   return view and view:is_valid()
 end
 
+function M.close()
+  if is_open() then
+    view:close()
+  end
+end
+
 function M.action(action)
   if action == "toggle_mode" then
     if config.options.mode == "document_diagnostics" then

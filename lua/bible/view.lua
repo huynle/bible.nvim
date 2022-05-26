@@ -139,7 +139,7 @@ function View:setup(query, opts)
   self:set_option("swapfile", false)
   self:set_option("buflisted", false)
   self:set_option("winfixwidth", true, true)
-  self:set_option("wrap", false, true)
+  self:set_option("wrap", true, true)
   self:set_option("spell", false, true)
   self:set_option("list", false, true)
   self:set_option("winfixheight", true, true)
@@ -158,7 +158,7 @@ function View:setup(query, opts)
     end
     for _, key in pairs(keys) do
       vim.api.nvim_buf_set_keymap(self.buf, "n", key, [[<cmd>lua require("bible").action("]] .. action .. [[")<cr>]], {
-        silent = true,
+        silent = false,
         noremap = true,
         nowait = true,
       })
@@ -362,9 +362,11 @@ end
 function View:get_cursor()
   return vim.api.nvim_win_get_cursor(self.win)
 end
+
 function View:get_line()
   return self:get_cursor()[1]
 end
+
 function View:get_col()
   return self:get_cursor()[2]
 end
