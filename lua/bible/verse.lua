@@ -19,7 +19,13 @@ function Verse:nl()
 end
 
 function Verse:render(str, group, opts)
-  str = str:gsub("[\n]", " ")
+  -- clean up the string for us
+  for k, v in ipairs(str) do
+    if str[k] then
+      -- str[k] = str[k]:gsub("[\n]", " ")
+    end
+  end
+
   if type(opts) == "string" then
     opts = { append = opts }
   end
@@ -40,7 +46,9 @@ function Verse:render(str, group, opts)
     }
     table.insert(self.hl, hl)
   end
-  self.current = self.current .. str
+  -- creating a full verse for now
+  local str_concat = table.concat(str, "")
+  self.current = self.current .. str_concat
   if opts.append then
     self.current = self.current .. opts.append
   end

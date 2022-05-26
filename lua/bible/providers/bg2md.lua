@@ -26,9 +26,9 @@ local function create_params(options)
   for k, v in pairs(options) do
     local k_cleaned = k:gsub("x_", "")
     if v == true and k ~= "query" then
-      table.insert(out, " --"..k_cleaned)
+      table.insert(out, " --" .. k_cleaned)
     elseif k == "version" then
-      table.insert(out, " --version "..v)
+      table.insert(out, " --version " .. v)
     end
   end
   return table.concat(out)
@@ -43,12 +43,12 @@ function M:lookup_verse(query, options)
 
   local options = vim.tbl_extend("force", M.options, options)
   local args = create_params(options)
-  local result = vim.fn.systemlist('bg2md '..args.." '"..query.."'")
+  local result = vim.fn.systemlist('bg2md ' .. args .. " '" .. query .. "'")
 
   local cleaned = {}
   for _, line in ipairs(result) do
-    assert( not string.find(line, "Error:"), "Could not find verse "..line)
-    cleaned[#cleaned+1] = clean_line(line)
+    assert(not string.find(line, "Error:"), "Could not find verse " .. line .. " CHANGE YOUR VERSION to see")
+    cleaned[#cleaned + 1] = clean_line(line)
   end
 
   return cleaned

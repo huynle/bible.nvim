@@ -68,7 +68,7 @@ function renderer.render(view, query, opts)
     end
 
     for k, v in pairs(verses) do
-      verse:render(k)
+      verse:render(v)
       verse:nl()
     end
 
@@ -85,6 +85,5 @@ function renderer.render(view, query, opts)
 
   end, query)
 end
-
 
 return renderer

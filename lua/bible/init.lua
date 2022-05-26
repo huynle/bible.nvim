@@ -15,7 +15,6 @@ function M.setup(options)
   print("sourced bible")
 end
 
-
 function M.enable_mapping()
   vim.api.nvim_set_keymap("v", "<leader>bb", ":'<,'>BibleLookupSelection {x_footnotes=true, x_crossrefs=true}<CR>", keymap_opts)
   vim.api.nvim_set_keymap("n", "<leader>bb", "<cmd>BibleLookupWORD {x_footnotes=true, x_crossrefs=true}<CR>", keymap_opts)
@@ -26,7 +25,7 @@ function M.enable_mapping()
   vim.api.nvim_set_keymap("n", "<leader>bv", "<Cmd>BibleLookup { query = vim.fn.input('Search: ') , version='NVB'}<CR>", keymap_opts)
   vim.api.nvim_set_keymap("n", "<leader>bf", "<Cmd>BibleLookup { query = vim.fn.input('Search: ')}<CR>", keymap_opts)
 
-  vim.api.nvim_set_keymap("n", "<leader>R", "<cmd>source ~/projects/bible.nvim/lua/bible/init.lua<CR>", keymap_opts)
+  vim.api.nvim_set_keymap("n", "<leader>R", "<cmd>source ~/.local/share/nvim/site/pack/packer/start/bible.nvim/lua/bible/init.lua<CR>", keymap_opts)
 end
 
 local view
@@ -34,7 +33,6 @@ local view
 local function is_open()
   return view and view:is_valid()
 end
-
 
 function M.action(action)
   if action == "toggle_mode" then
@@ -116,9 +114,6 @@ function M.action(action)
   return M
 end
 
-
-
-
 M.setup({
   default_provider = "bg2mdasdf",
   providers = {
@@ -130,7 +125,7 @@ M.setup({
       newline = false,
       x_numbering = false,
       x_crossrefs = false,
-      version = "NABRE",
+      version = "NET",
     }
   }
 })
