@@ -39,16 +39,37 @@ local function clean_line(line)
   return line:gsub("%s+$", "")
 end
 
+local function break_verse(line)
+  local verses = {}
+  if line ~= "" then
+    for verse_n, verse in string.find(line, "(%d+) (%w+)") do
+      verses[verse_n] = verse
+    end
+  end
+  return verses
+end
+
 function M:lookup_verse(query, options)
 
   local options = vim.tbl_extend("force", M.options, options)
   local args = create_params(options)
   local result = vim.fn.systemlist('bg2md ' .. args .. " '" .. query .. "'")
 
+  local result_map
+  result_map = {
+    empty = 0,
+    verse = "%s+\\d+",
+    commentary = 2,
+  }
+
   local cleaned = {}
+  local chapters = {}
+  local verses = {}
+  local commentary = {}
   for _, line in ipairs(result) do
     assert(not string.find(line, "Error:"), "Could not find verse " .. line .. " CHANGE YOUR VERSION to see")
     cleaned[#cleaned + 1] = clean_line(line)
+    verses[#verses + 1] = break_verse(line)
   end
 
   return cleaned

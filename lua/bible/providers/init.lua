@@ -9,7 +9,7 @@ M.options = {}
 
 function M.get_provider(options)
   local sc = config.options.default_provider and config.options.default_provider or M.options.provider
-  return require("bible.providers."..sc)
+  return require("bible.providers." .. sc)
 end
 
 function M.setup(options)
@@ -35,7 +35,7 @@ end
 function M:lookup_verse(cb, options)
   local provider = M.get_provider(options)
 
-  local queries = util.splitStr(options.query, {sep = ";"})
+  local queries = util.splitStr(options.query, { sep = ";" })
 
   local ordered_keys = {}
 
@@ -46,7 +46,7 @@ function M:lookup_verse(cb, options)
   table.sort(ordered_keys)
   local verses = {}
   for i = 1, #ordered_keys do
-    local k, v = ordered_keys[i], queries[ ordered_keys[i] ]
+    local k, v = ordered_keys[i], queries[ordered_keys[i]]
     options.query = v
     verses[v] = provider:lookup_verse(v, options)
     cb(verses[v], options)
@@ -61,7 +61,7 @@ function M:get(win, buf, cb, query_opts)
   -- local name = options.mode
   local provider = M.get_provider()
 
-  local queries = util.splitStr(query_opts.query, {sep = ";"})
+  local queries = util.splitStr(query_opts.query, { sep = ";" })
   -- local verse = Verse:new()
 
   local ordered_keys = {}
@@ -71,15 +71,14 @@ function M:get(win, buf, cb, query_opts)
   end
 
   table.sort(ordered_keys)
-  local verses = {}
+  local items = {}
   for i = 1, #ordered_keys do
-    local k, v = ordered_keys[i], queries[ ordered_keys[i] ]
-    verses[v] = provider:lookup_verse(v, query_opts)
+    local k, v = ordered_keys[i], queries[ordered_keys[i]]
+    items[v] = provider:lookup_verse(v, query_opts)
     -- view:render(verse:render(v))
   end
-  cb(verses)
+  cb(items)
 end
-
 
 function M:group(items)
   -- grouping -- maybe for chapter
@@ -87,13 +86,13 @@ function M:group(items)
   local keyid = 0
   local groups = {}
   -- for _, item in ipairs(items) do
-  for k, v in pairs(items) do
-    if groups[item.filename] == nil then
-      groups[item.filename] = { filename = item.filename, items = {} }
-      keys[item.filename] = keyid
+  for _, item in pairs(items) do
+    if groups[item.chapter] == nil then
+      groups[item.chapter] = { book = item.chapter, items = {} }
+      keys[item.chapter] = keyid
       keyid = keyid + 1
     end
-    table.insert(groups[item.filename].items, item)
+    table.insert(groups[item.chapter].items, item)
   end
 
   local ret = {}
@@ -105,6 +104,5 @@ function M:group(items)
   end)
   return ret
 end
-
 
 return M

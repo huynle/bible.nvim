@@ -47,7 +47,7 @@ local function wipe_rogue_buffer()
         vim.api.nvim_win_close(id, true)
       end
     end
-
+    -- Print("trying to wipe buf " .. bn)
     vim.api.nvim_buf_set_name(bn, "")
     vim.schedule(function()
       pcall(vim.api.nvim_buf_delete, bn, {})
@@ -72,6 +72,7 @@ function View:new(opts)
     items = {},
     group = group,
   }
+  -- Print(this)
   setmetatable(this, self)
   return this
 end
@@ -100,13 +101,13 @@ function View:clear()
 end
 
 function View:unlock()
-  self:set_option("modifiable", true)
-  self:set_option("readonly", false)
+  -- self:set_option("modifiable", true)
+  -- self:set_option("readonly", false)
 end
 
 function View:lock()
-  self:set_option("readonly", true)
-  self:set_option("modifiable", false)
+  -- self:set_option("readonly", true)
+  -- self:set_option("modifiable", false)
 end
 
 function View:set_lines(lines, first, last, strict)
@@ -125,16 +126,22 @@ function View:update(query, opts)
   renderer.render(self, query, opts)
 end
 
+-- set up a the view and create bindings associated to actions
 function View:setup(query, opts)
   util.debug("setup")
   opts = opts or {}
   vim.cmd("setlocal nonu")
   vim.cmd("setlocal nornu")
+
+
+  -- note: taken out for now, no need since we have `bufhidden` = `wipe`
   if not pcall(vim.api.nvim_buf_set_name, self.buf, "Bible") then
     wipe_rogue_buffer()
     vim.api.nvim_buf_set_name(self.buf, "Bible")
   end
-  self:set_option("bufhidden", "wipe")
+
+  -- destroy buf when hidden
+  -- self:set_option("bufhidden", "wipe")
   self:set_option("buftype", "nofile")
   self:set_option("swapfile", false)
   self:set_option("buflisted", false)
@@ -144,12 +151,12 @@ function View:setup(query, opts)
   self:set_option("list", false, true)
   self:set_option("winfixheight", true, true)
   self:set_option("signcolumn", "no", true)
-  self:set_option("foldmethod", "manual", true)
-  self:set_option("foldcolumn", "0", true)
-  self:set_option("foldlevel", 3, true)
-  self:set_option("foldenable", false, true)
-  self:set_option("winhighlight", "Normal:BibleNormal,EndOfBuffer:BibleNormal,SignColumn:BibleNormal", true)
-  self:set_option("fcs", "eob: ", true)
+  -- self:set_option("foldmethod", "manual", true)
+  -- self:set_option("foldcolumn", "0", true)
+  -- self:set_option("foldlevel", 3, true)
+  -- self:set_option("foldenable", false, true)
+  -- self:set_option("winhighlight", "Normal:BibleNormal,EndOfBuffer:BibleNormal,SignColumn:BibleNormal", true)
+  -- self:set_option("fcs", "eob: ", true)
   self:set_option("filetype", "Bible")
 
   for action, keys in pairs(config.options.action_keys) do
@@ -162,6 +169,11 @@ function View:setup(query, opts)
         noremap = true,
         nowait = true,
       })
+      -- vim.api.nvim_buf_set_keymap(self.buf, "n", key, [[<cmd>luado Print("GOT HERE")<cr>]], {
+      --   silent = false,
+      --   noremap = true,
+      --   nowait = true,
+      -- })
     end
   end
 
@@ -176,7 +188,7 @@ function View:setup(query, opts)
       augroup BibleHighlights
         autocmd! * <buffer>
         autocmd BufEnter <buffer> lua require("bible").action("on_enter")
-        autocmd CursorMoved <buffer> lua require("bible").action("auto_preview")
+        " autocmd CursorMoved <buffer> lua require("bible").action("auto_preview")
         autocmd BufLeave <buffer> lua require("bible").action("on_leave")
       augroup END
     ]],

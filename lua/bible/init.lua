@@ -4,9 +4,9 @@ local providers = require("bible.providers")
 
 local keymap_opts = { noremap = true, silent = true }
 
-local M = {}
+local Bible = {}
 
-function M.setup(options)
+function Bible.setup(options)
   dev.unload_packages("bible")
   config.setup(options)
   providers.setup(options.providers)
@@ -15,7 +15,7 @@ function M.setup(options)
   print("sourced bible")
 end
 
-function M.enable_mapping()
+function Bible.enable_mapping()
   vim.api.nvim_set_keymap("v", "<leader>bb", ":'<,'>BibleLookupSelection {x_footnotes=true, x_crossrefs=true}<CR>", keymap_opts)
   vim.api.nvim_set_keymap("n", "<leader>bb", "<cmd>BibleLookupWORD {x_footnotes=true, x_crossrefs=true}<CR>", keymap_opts)
   -- bible study mode - enable all
@@ -34,13 +34,14 @@ local function is_open()
   return view and view:is_valid()
 end
 
-function M.close()
+function Bible.close()
   if is_open() then
     view:close()
   end
 end
 
-function M.action(action)
+function Bible.action(action)
+  Print("GOT HERE " .. action)
   if action == "toggle_mode" then
     if config.options.mode == "document_diagnostics" then
       config.options.mode = "workspace_diagnostics"
@@ -54,7 +55,7 @@ function M.action(action)
     view:on_win_enter()
   end
   if not is_open() then
-    return M
+    return Bible
   end
   if action == "hover" then
     view:hover()
@@ -70,13 +71,13 @@ function M.action(action)
   end
   if action == "jump_close" then
     view:jump()
-    M.close()
+    Bible.close()
   end
   if action == "open_folds" then
-    M.refresh({ open_folds = true })
+    Bible.refresh({ open_folds = true })
   end
   if action == "close_folds" then
-    M.refresh({ close_folds = true })
+    Bible.refresh({ close_folds = true })
   end
   if action == "toggle_fold" then
     view:toggle_fold()
@@ -92,11 +93,11 @@ function M.action(action)
   end
   if action == "next" then
     view:next_item()
-    return M
+    return Bible
   end
   if action == "previous" then
     view:previous_item()
-    return M
+    return Bible
   end
 
   if action == "toggle_preview" then
@@ -114,13 +115,13 @@ function M.action(action)
     view:preview()
   end
 
-  if M[action] then
-    M[action]()
+  if Bible[action] then
+    Bible[action]()
   end
-  return M
+  return Bible
 end
 
-M.setup({
+Bible.setup({
   default_provider = "bg2mdasdf",
   providers = {
     bg2md = {
@@ -131,11 +132,11 @@ M.setup({
       newline = false,
       x_numbering = false,
       x_crossrefs = false,
-      version = "NET",
+      version = "NABRE",
     }
   }
 })
 
-M.enable_mapping()
+Bible.enable_mapping()
 
-return M
+return Bible

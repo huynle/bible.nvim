@@ -44,14 +44,16 @@ function renderer.render(view, query, opts)
   local buf = vim.api.nvim_win_get_buf(view.parent)
   providers:get(view.parent, buf, function(verses)
     -- FIXME: working on group!
-    -- local grouped = providers:group(verses)
-    -- local count = util.count(grouped)
+    local grouped = providers:group(verses)
+    local count = util.count(grouped)
 
     -- check for auto close
     if opts.auto and config.options.auto_close then
       if util.tablelength(verses) == 0 then
-        view:close()
-        return
+        if count == 0 then
+          view:close()
+          return
+        end
       end
     end
 
