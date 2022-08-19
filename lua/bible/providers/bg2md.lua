@@ -62,10 +62,17 @@ function M:lookup_verse(query, options)
     commentary = 2,
   }
 
-  local cleaned = {}
-  local chapters = {}
-  local verses = {}
-  local commentary = {}
+  local verse = {
+    version = "",
+    item = "",
+    commentary = "",
+    crossref = ""
+  }
+
+  local book = {
+    chapter = {},
+  }
+
   for _, line in ipairs(result) do
     assert(not string.find(line, "Error:"), "Could not find verse " .. line .. " CHANGE YOUR VERSION to see")
     cleaned[#cleaned + 1] = clean_line(line)

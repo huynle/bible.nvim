@@ -35,6 +35,7 @@ local function is_open()
 end
 
 function Bible.close()
+  Print("got to close")
   if is_open() then
     view:close()
   end
@@ -115,7 +116,10 @@ function Bible.action(action)
     view:preview()
   end
 
+  Print "again..."
+
   if Bible[action] then
+    Print("ASDF")
     Bible[action]()
   end
   return Bible
