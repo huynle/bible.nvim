@@ -54,9 +54,38 @@ function M:lookup_verse(query, options)
   local options = vim.tbl_extend("force", M.options, options)
   local args = create_params(options)
   local result = vim.fn.systemlist('bg2md ' .. args .. " '" .. query .. "'")
+  local cleaned = {}
+  local verses = {}
 
-  local result_map
-  result_map = {
+  local final_result = {
+    book = "",
+    chapter = "",
+    name = "",
+    verses = {},
+    language = "",
+    commentary = "",
+    value = result,
+  }
+
+  -- local final_result = {
+  --   book = {
+  --     name = {},
+  --     value = {},
+  --     commentary = {},
+  --     chapter = {
+  --       name = {},
+  --       value = {},
+  --       commentary = {},
+  --       verse = {
+  --         name = {},
+  --         value = result,
+  --         commentary = {}
+  --       }
+  --     },
+  --   }
+  -- }
+
+  local result_map = {
     empty = 0,
     verse = "%s+\\d+",
     commentary = 2,
@@ -73,13 +102,13 @@ function M:lookup_verse(query, options)
     chapter = {},
   }
 
-  for _, line in ipairs(result) do
-    assert(not string.find(line, "Error:"), "Could not find verse " .. line .. " CHANGE YOUR VERSION to see")
-    cleaned[#cleaned + 1] = clean_line(line)
-    verses[#verses + 1] = break_verse(line)
-  end
+  -- for _, line in ipairs(result) do
+  --   assert(not string.find(line, "Error:"), "Could not find verse " .. line .. " CHANGE YOUR VERSION to see")
+  --   cleaned[#cleaned + 1] = clean_line(line)
+  --   verses[#verses + 1] = break_verse(line)
+  -- end
 
-  return cleaned
+  return final_result
 end
 
 return M

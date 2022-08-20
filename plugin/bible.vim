@@ -19,3 +19,10 @@ lua require'bible'
 let g:loaded_bible = 1
 
 
+" command! -nargs=* -complete=custom,s:complete Bible lua require'trouble'.open(<f-args>)
+" command! -nargs=* -complete=custom,s:complete BibleToggle lua require'trouble'.toggle(<f-args>)
+" command! BibleClose lua require'trouble'.close()
+" command! BibleRefresh lua require'trouble'.refresh()
+
+
+

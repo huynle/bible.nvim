@@ -81,8 +81,8 @@ function View:set_option(name, value, win)
   if win then
     return vim.api.nvim_win_set_option(self.win, name, value)
   else
-    return vim.api.nvim_buf_set_option(self.buf, name, value)
   end
+  return vim.api.nvim_buf_set_option(self.buf, name, value)
 end
 
 ---@param verse Verse
@@ -121,13 +121,13 @@ function View:is_valid()
   return vim.api.nvim_buf_is_valid(self.buf) and vim.api.nvim_buf_is_loaded(self.buf)
 end
 
-function View:update(query, opts)
+function View:update(results, opts)
   util.debug("update")
-  renderer.render(self, query, opts)
+  renderer.render(self, results, opts)
 end
 
 -- set up a the view and create bindings associated to actions
-function View:setup(query, opts)
+function View:setup(opts)
   util.debug("setup")
   opts = opts or {}
   vim.cmd("setlocal nonu")
@@ -199,7 +199,7 @@ function View:setup(query, opts)
     self:on_enter()
   end
   self:lock()
-  self:update(query, opts)
+  self:update(opts)
 end
 
 function View:on_enter()
@@ -352,7 +352,7 @@ function View:close()
   end
 end
 
-function View.create(query, options)
+function View.create(options)
   options = options or {}
   if options.win then
     View.switch_to(options.win)
@@ -363,7 +363,7 @@ function View.create(query, options)
     vim.cmd("wincmd " .. (pos[config.options.position] or "K"))
   end
   local buffer = View:new(options)
-  buffer:setup(query, options)
+  buffer:setup(options)
 
   if options and options.auto then
     buffer:switch_to_parent()
