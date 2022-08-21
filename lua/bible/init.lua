@@ -6,21 +6,6 @@ local View = require("bible.view")
 
 local Bible = {}
 
-function Bible.setup(options)
-  dev.unload_packages("bible")
-  config.setup(options)
-  providers.setup(options.providers)
-
-  -- require("bible.commands.builtin")
-  print("sourced bible")
-end
-
-local view
-
-local function is_open()
-  return view and view:is_valid()
-end
-
 local function get_opts(...)
   local args = { ... }
   if vim.tbl_islist(args) and #args == 1 and type(args[1]) == "table" then
@@ -33,7 +18,7 @@ local function get_opts(...)
       if k then
         opts[k] = v
       elseif opts.mode then
-        util.error("unknown option " .. value)
+        -- util.error("unknown option " .. value)
       else
         opts.mode = value
       end
@@ -42,9 +27,27 @@ local function get_opts(...)
     end
   end
   opts = opts or {}
-  util.fix_mode(opts)
-  config.options.cmd_options = opts
+  -- util.fix_mode(opts)
+  config.options = opts
   return opts
+end
+
+function Bible.setup(options)
+  -- local options = get_opts(...)
+
+  -- local options = vim.tbl_extend("force", options, config.defaults)
+  dev.unload_packages("bible")
+  local updated_options = config.setup(options)
+  providers.setup(updated_options.providers)
+
+  require("bible.commands.builtin")
+  print("sourced bible")
+end
+
+local view
+
+local function is_open()
+  return view and view:is_valid()
 end
 
 function Bible.open(query, ...)
@@ -53,10 +56,10 @@ function Bible.open(query, ...)
     config.options.mode = opts.mode
   end
   opts.focus = true
-  require("bible.providers").get(query, function(results)
+  require("bible.providers").get(query, opts, function(results)
     view = View.create(opts)
     view:update(results)
-  end, config.options)
+  end)
 end
 
 function Bible.close()
@@ -150,21 +153,34 @@ function Bible.action(action)
   return Bible
 end
 
-Bible.setup({
-  default_provider = "bg2mdasdf",
-  providers = {
-    bg2md = {
-      boldwords = true,
-      x_copyright = true,
-      x_headers = false,
-      x_footnotes = false,
-      newline = false,
-      x_numbering = false,
-      x_crossrefs = false,
-      version = "NABRE",
-    }
-  }
-})
+-- Bible.setup({
+--   default_provider = "bg2mdasdf",
+--   providers = {
+--     bg2md = {
+--       boldwords = true,
+--       x_copyright = true,
+--       x_headers = false,
+--       x_footnotes = false,
+--       newline = false,
+--       x_numbering = false,
+--       x_crossrefs = false,
+--       version = "NABRE",
+--     }
+--   }
+-- })
 
+-- local keymap_opts = { noremap = true, silent = true }
+-- -- function Bible.enable_mapping()
+-- vim.api.nvim_set_keymap("v", "<leader>bb", ":'<,'>BibleLookupSelection {x_footnotes=true, x_crossrefs=true}<CR>", keymap_opts)
+-- -- vim.api.nvim_set_keymap("n", "<leader>bb", "<cmd>BibleLookupWORD {x_footnotes=true, x_crossrefs=true}<CR>", keymap_opts)
+-- -- -- bible study mode - enable all
+-- -- -- vim.api.nvim_set_keymap("n", "<leader>bs", "<cmd>BibleLookupWORD { provider='bg2md' }<CR>", keymap_opts)
+-- -- vim.api.nvim_set_keymap("n", "<leader>bs", "<cmd>BibleLookupWORD<CR>", keymap_opts)
+-- -- -- vietnamese version
+-- -- vim.api.nvim_set_keymap("n", "<leader>bv", "<Cmd>BibleLookup { query = vim.fn.input('Search: ') , version='NVB'}<CR>", keymap_opts)
+-- -- vim.api.nvim_set_keymap("n", "<leader>bf", "<Cmd>BibleLookup { query = vim.fn.input('Search: ')}<CR>", keymap_opts)
+
+-- -- vim.api.nvim_set_keymap("n", "<leader>R", "<cmd>source ~/.local/share/nvim/site/pack/packer/start/bible.nvim/lua/bible/init.lua<CR>", keymap_opts)
+-- -- -- end
 
 return Bible

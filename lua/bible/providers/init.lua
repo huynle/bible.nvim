@@ -55,7 +55,7 @@ end
 
 ---@param options BibleOptions
 -- function M:get(query_opts, view)
-function M:get(query, cb, options)
+function M:get(query, options, cb)
   -- local options = vim.tbl_extend("force", config.options, options or {})
 
   -- local name = options.mode

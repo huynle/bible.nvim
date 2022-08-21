@@ -24,5 +24,8 @@ let g:loaded_bible = 1
 " command! BibleClose lua require'trouble'.close()
 " command! BibleRefresh lua require'trouble'.refresh()
 
+" command! BibleReload lua R("bible")
+command! BibleReload lua R("bible"); require'bible'.setup({})
 
 
+" vim.api.nvim_set_keymap("v", "<leader>bb", ":'<,'>BibleLookupSelection {x_footnotes=true, x_crossrefs=true}<CR>", keymap_opts)
