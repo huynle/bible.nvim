@@ -9,12 +9,13 @@ default provider.**
 
 ## Features
 * [ ] framework that supports multiple providers. so you can get your bible from anywhere you have access to.
+  + Local provider, or BibleGateway through bg2md, and more?
 * [x] Single Verse lookup
 * [ ] Multiple verse lookup
 * [ ] Clean display
 * [ ] Reference the bible verse in the view with cursor
-
-
+* [ ] Tests
+* [ ] Docs
 
 # Credits
 Bit and pieces of this plugin is gather from these plugins
