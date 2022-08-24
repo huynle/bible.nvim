@@ -55,33 +55,34 @@ end
 
 ---@param options BibleOptions
 -- function M:get(query_opts, view)
-function M:get(query, options, cb)
+function M.get(query, provider_options, cb)
   -- local options = vim.tbl_extend("force", config.options, options or {})
 
   -- local name = options.mode
   local provider = M.get_provider()
 
-  -- local queries = util.splitStr(options.query, { sep = ";" })
+  local queries = util.splitStr(query, { sep = ";" })
   -- local verse = Verse:new()
 
   local ordered_keys = {}
 
-  for k in pairs(query) do
+  for k in pairs(queries) do
     table.insert(ordered_keys, k)
   end
 
   table.sort(ordered_keys)
   local items = {}
   for i = 1, #ordered_keys do
-    local k, v = ordered_keys[i], query[ordered_keys[i]]
-    items[v] = provider:lookup_verse(v, options)
+    local k, v = ordered_keys[i], queries[ordered_keys[i]]
+    items[v] = provider:lookup_verse(v, provider_options)
     -- view:render(verse:render(v))
   end
 
   cb(items)
 end
 
-function M:group(items)
+function M:group(items, opts)
+  --- STOPPED HERE
   -- grouping -- maybe for chapter
   local keys = {}
   local keyid = 0

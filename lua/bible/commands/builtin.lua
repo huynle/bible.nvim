@@ -1,4 +1,4 @@
-local config = require("bible.config")
+-- local config = require("bible.config")
 -- local provider = require("bible.providers")
 local commands = require("bible.commands")
 -- local actions = require("bible.actions")
@@ -11,10 +11,10 @@ local keymap_opts = { noremap = true, silent = true }
 commands.add("BibleLookupSelection", function(options)
   local selected_text = util.get_text_in_range(util.get_selected_range())
   assert(selected_text ~= nil, "No selected text")
-  local query = vim.tbl_extend("force", { query = selected_text }, options or {})
+  -- local query = vim.tbl_extend("force", { query = selected_text }, options or {})
   -- provider:lookup_verse(actions.display_verse, options)
   -- view = View.create(query, config.options)
-  Bible.open(query)
+  Bible.open(selected_text, options)
   -- provider:get(query, view)
 end, { needs_selection = true })
 

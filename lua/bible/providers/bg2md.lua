@@ -49,22 +49,21 @@ local function break_verse(line)
   return verses
 end
 
-function M:lookup_verse(query, options)
+function M:lookup_verse(query, provider_options)
 
-  local options = vim.tbl_extend("force", M.options, options)
+  local options = vim.tbl_extend("force", M.options, provider_options)
   local args = create_params(options)
   local result = vim.fn.systemlist('bg2md ' .. args .. " '" .. query .. "'")
   local cleaned = {}
   local verses = {}
 
   local final_result = {
-    book = "",
+    name = query,
     chapter = "",
-    name = "",
     verses = {},
-    language = "",
     commentary = "",
-    value = result,
+    value = table.concat(result, " "),
+    version = options.version,
   }
 
   -- local final_result = {

@@ -34,11 +34,11 @@ end
 
 function Bible.setup(options)
   -- local options = get_opts(...)
-
   -- local options = vim.tbl_extend("force", options, config.defaults)
+
   dev.unload_packages("bible")
-  local updated_options = config.setup(options)
-  providers.setup(updated_options.providers)
+  config.setup(options)
+  providers.setup(config.options.providers)
 
   require("bible.commands.builtin")
   print("sourced bible")
@@ -50,14 +50,10 @@ local function is_open()
   return view and view:is_valid()
 end
 
-function Bible.open(query, ...)
-  local opts = get_opts(...)
-  if opts.mode and (opts.mode ~= config.options.mode) then
-    config.options.mode = opts.mode
-  end
-  opts.focus = true
-  require("bible.providers").get(query, opts, function(results)
-    view = View.create(opts)
+function Bible.open(query, provider_options)
+  -- local opts = get_opts(...)
+  require("bible.providers").get(query, provider_options, function(results)
+    view = View.create(config.options)
     view:update(results)
   end)
 end
@@ -147,7 +143,6 @@ function Bible.action(action)
   -- Print("again...")
 
   if Bible[action] then
-    -- Print("ASDF")
     Bible[action]()
   end
   return Bible

@@ -1,5 +1,7 @@
 local M = {}
 
+M.namespace = vim.api.nvim_create_namespace("Bible")
+
 local defaults = {
   debug = true,
   default_provider = "bg2md",
@@ -16,7 +18,10 @@ local defaults = {
     }
   },
   display = true,
-  group = true, -- group results by file
+  group = {
+    enable = true,
+    group_by = "version"
+  }, -- group results by file
   padding = true, -- add an extra new line on top of the list
   position = "right", -- position of the list can be: bottom, top, left, right
   height = 10, -- height of the trouble list when position is top or bottom
@@ -66,7 +71,7 @@ M.options = {}
 function M.setup(options)
   M.options = vim.tbl_deep_extend("force", {}, defaults, options or {})
   -- M.apply_defaults_to_providers()
-  return M.options
+  -- return M.options
 end
 
 M.setup()

@@ -85,13 +85,13 @@ function View:set_option(name, value, win)
   return vim.api.nvim_buf_set_option(self.buf, name, value)
 end
 
----@param verse Verse
-function View:render(verse)
+---@param text Text
+function View:render(text)
   self:unlock()
-  self:set_lines(verse.lines)
+  self:set_lines(text.lines)
   self:lock()
   clear_hl(self.buf)
-  for _, data in ipairs(verse.hl) do
+  for _, data in ipairs(text.hl) do
     highlight(self.buf, config.namespace, data.group, data.line, data.from, data.to)
   end
 end
@@ -121,9 +121,9 @@ function View:is_valid()
   return vim.api.nvim_buf_is_valid(self.buf) and vim.api.nvim_buf_is_loaded(self.buf)
 end
 
-function View:update(results, opts)
+function View:update(results)
   util.debug("update")
-  renderer.render(self, results, opts)
+  renderer.render(self, results)
 end
 
 -- set up a the view and create bindings associated to actions
@@ -199,7 +199,7 @@ function View:setup(opts)
     self:on_enter()
   end
   self:lock()
-  self:update(opts)
+  -- self:update({}, opts)
 end
 
 function View:on_enter()
@@ -420,16 +420,16 @@ end
 function View:hover(opts)
   opts = opts or {}
   local item = opts.item or self:current_item()
-  if not (item and item.full_verse) then
+  if not (item and item.full_text) then
     return
   end
 
   local lines = {}
-  for line in item.full_verse:gmatch("([^\n]*)\n?") do
+  for line in item.full_text:gmatch("([^\n]*)\n?") do
     table.insert(lines, line)
   end
 
-  vim.lsp.util.open_floating_preview(lines, "plainverse", { border = "single" })
+  vim.lsp.util.open_floating_preview(lines, "plaintext", { border = "single" })
 end
 
 function View:jump(opts)

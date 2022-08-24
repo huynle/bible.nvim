@@ -1,24 +1,24 @@
----@class Verse
+---@class Text
 ---@field lines string[]
 ---@field hl Highlight[]
 ---@field lineNr number
 ---@field current string
-local Verse = {}
-Verse.__index = Verse
+local Text = {}
+Text.__index = Text
 
-function Verse:new()
+function Text:new()
   local this = { lines = {}, hl = {}, lineNr = 0, current = "" }
   setmetatable(this, self)
   return this
 end
 
-function Verse:nl()
+function Text:nl()
   table.insert(self.lines, self.current)
   self.current = ""
   self.lineNr = self.lineNr + 1
 end
 
-function Verse:render(str, group, opts)
+function Text:render(str, group, opts)
   -- clean up the string for us
   for k, v in ipairs(str) do
     if str[k] then
@@ -46,7 +46,7 @@ function Verse:render(str, group, opts)
     }
     table.insert(self.hl, hl)
   end
-  -- creating a full verse for now
+  -- creating a full text for now
   local str_concat = table.concat(str, "")
   self.current = self.current .. str_concat
   if opts.append then
@@ -57,4 +57,4 @@ function Verse:render(str, group, opts)
   end
 end
 
-return Verse
+return Text
