@@ -121,9 +121,10 @@ function View:is_valid()
   return vim.api.nvim_buf_is_valid(self.buf) and vim.api.nvim_buf_is_loaded(self.buf)
 end
 
-function View:update(results)
+function View:update(results, opts)
+  opts = opts or {}
   util.debug("update")
-  renderer.render(self, results)
+  renderer.render(self, results, opts)
 end
 
 -- set up a the view and create bindings associated to actions
@@ -141,7 +142,7 @@ function View:setup(opts)
   end
 
   -- destroy buf when hidden
-  -- self:set_option("bufhidden", "wipe")
+  self:set_option("bufhidden", "wipe")
   self:set_option("buftype", "nofile")
   self:set_option("swapfile", false)
   self:set_option("buflisted", false)
@@ -151,10 +152,10 @@ function View:setup(opts)
   self:set_option("list", false, true)
   self:set_option("winfixheight", true, true)
   self:set_option("signcolumn", "no", true)
-  -- self:set_option("foldmethod", "manual", true)
-  -- self:set_option("foldcolumn", "0", true)
-  -- self:set_option("foldlevel", 3, true)
-  -- self:set_option("foldenable", false, true)
+  self:set_option("foldmethod", "manual", true)
+  self:set_option("foldcolumn", "0", true)
+  self:set_option("foldlevel", 3, true)
+  self:set_option("foldenable", false, true)
   -- self:set_option("winhighlight", "Normal:BibleNormal,EndOfBuffer:BibleNormal,SignColumn:BibleNormal", true)
   -- self:set_option("fcs", "eob: ", true)
   self:set_option("filetype", "Bible")

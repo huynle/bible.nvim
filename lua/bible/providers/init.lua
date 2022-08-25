@@ -95,13 +95,14 @@ function M:group(items, opts)
     --   keyid = keyid + 1
     -- end
     -- table.insert(groups[item.chapter].items, item)
+    local group_by = item[opts.group_by]
 
-    if groups[item.name] == nil then
-      groups[item.name] = { name = item.name, items = {} }
-      keys[item.name] = keyid
+    if groups[group_by] == nil then
+      groups[group_by] = { name = group_by, items = {} }
+      keys[group_by] = keyid
       keyid = keyid + 1
     end
-    table.insert(groups[item.name].items, item)
+    table.insert(groups[group_by].items, item)
 
   end
 

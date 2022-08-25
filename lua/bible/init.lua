@@ -85,28 +85,28 @@ function Bible.action(action)
   -- if action == "hover" then
   --   view:hover()
   -- end
-  -- if action == "jump" then
-  --   view:jump()
-  -- elseif action == "open_split" then
-  --   view:jump({ precmd = "split" })
-  -- elseif action == "open_vsplit" then
-  --   view:jump({ precmd = "vsplit" })
-  -- elseif action == "open_tab" then
-  --   view:jump({ precmd = "tabe" })
-  -- end
-  -- if action == "jump_close" then
-  --   view:jump()
-  --   Bible.close()
-  -- end
-  -- if action == "open_folds" then
-  --   Bible.refresh({ open_folds = true })
-  -- end
-  -- if action == "close_folds" then
-  --   Bible.refresh({ close_folds = true })
-  -- end
-  -- if action == "toggle_fold" then
-  --   view:toggle_fold()
-  -- end
+  if action == "jump" then
+    view:jump()
+  elseif action == "open_split" then
+    view:jump({ precmd = "split" })
+  elseif action == "open_vsplit" then
+    view:jump({ precmd = "vsplit" })
+  elseif action == "open_tab" then
+    view:jump({ precmd = "tabe" })
+  end
+  if action == "jump_close" then
+    view:jump()
+    Bible.close()
+  end
+  if action == "open_folds" then
+    Bible.refresh({ open_folds = true })
+  end
+  if action == "close_folds" then
+    Bible.refresh({ close_folds = true })
+  end
+  if action == "toggle_fold" then
+    view:toggle_fold()
+  end
   if action == "on_enter" then
     view:on_enter()
   end
@@ -118,11 +118,11 @@ function Bible.action(action)
   end
   if action == "next" then
     view:next_item()
-    return Bible
+    -- return Bible
   end
   if action == "previous" then
     view:previous_item()
-    return Bible
+    -- return Bible
   end
 
   -- if action == "toggle_preview" then
@@ -147,35 +147,5 @@ function Bible.action(action)
   end
   return Bible
 end
-
--- Bible.setup({
---   default_provider = "bg2mdasdf",
---   providers = {
---     bg2md = {
---       boldwords = true,
---       x_copyright = true,
---       x_headers = false,
---       x_footnotes = false,
---       newline = false,
---       x_numbering = false,
---       x_crossrefs = false,
---       version = "NABRE",
---     }
---   }
--- })
-
--- local keymap_opts = { noremap = true, silent = true }
--- -- function Bible.enable_mapping()
--- vim.api.nvim_set_keymap("v", "<leader>bb", ":'<,'>BibleLookupSelection {x_footnotes=true, x_crossrefs=true}<CR>", keymap_opts)
--- -- vim.api.nvim_set_keymap("n", "<leader>bb", "<cmd>BibleLookupWORD {x_footnotes=true, x_crossrefs=true}<CR>", keymap_opts)
--- -- -- bible study mode - enable all
--- -- -- vim.api.nvim_set_keymap("n", "<leader>bs", "<cmd>BibleLookupWORD { provider='bg2md' }<CR>", keymap_opts)
--- -- vim.api.nvim_set_keymap("n", "<leader>bs", "<cmd>BibleLookupWORD<CR>", keymap_opts)
--- -- -- vietnamese version
--- -- vim.api.nvim_set_keymap("n", "<leader>bv", "<Cmd>BibleLookup { query = vim.fn.input('Search: ') , version='NVB'}<CR>", keymap_opts)
--- -- vim.api.nvim_set_keymap("n", "<leader>bf", "<Cmd>BibleLookup { query = vim.fn.input('Search: ')}<CR>", keymap_opts)
-
--- -- vim.api.nvim_set_keymap("n", "<leader>R", "<cmd>source ~/.local/share/nvim/site/pack/packer/start/bible.nvim/lua/bible/init.lua<CR>", keymap_opts)
--- -- -- end
 
 return Bible

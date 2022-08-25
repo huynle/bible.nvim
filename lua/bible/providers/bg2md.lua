@@ -63,6 +63,7 @@ function M:lookup_verse(query, provider_options)
     verses = {},
     commentary = "",
     value = table.concat(result, " "),
+    -- value = result,
     version = options.version,
   }
 

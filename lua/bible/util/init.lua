@@ -66,7 +66,7 @@ function M.get_text_in_range(range)
   if vim.tbl_isempty(lines) then
     return nil
   end
-  local MAX_STRING_SUB_INDEX = 2^31 - 1 -- LuaJIT only supports 32bit integers for `string.sub` (in block selection B.character is 2^31)
+  local MAX_STRING_SUB_INDEX = 2 ^ 31 - 1 -- LuaJIT only supports 32bit integers for `string.sub` (in block selection B.character is 2^31)
   lines[#lines] = string.sub(lines[#lines], 1, math.min(B.character, MAX_STRING_SUB_INDEX))
   lines[1] = string.sub(lines[1], math.min(A.character + 1, MAX_STRING_SUB_INDEX))
   return table.concat(lines, "\n")
@@ -95,7 +95,6 @@ function M.get_selected_range()
     ["end"] = { line = B[1], character = B[2] },
   }
 end
-
 
 function M.warn(msg)
   vim.notify(msg, vim.log.levels.WARN, { title = "Trouble" })
@@ -128,20 +127,18 @@ function M.throttle(ms, fn)
   end
 end
 
-
-
-function M.splitStr (inputstr, opts)
+function M.splitStr(inputstr, opts)
   opts = vim.tbl_deep_extend("force", {
     sep = "%s",
     clean_before = true,
     clean_after = true,
   }, opts)
   -- return an ordered table, or key and its index
-  local t={}
-  for str in string.gmatch(inputstr, "([^"..opts.sep.."]+)") do
+  local t = {}
+  for str in string.gmatch(inputstr, "([^" .. opts.sep .. "]+)") do
     str = M.cleanStr(str, opts)
     if str ~= "" then
-      t[#t+1] = str
+      t[#t + 1] = str
     end
   end
   return t
@@ -164,12 +161,10 @@ function M.cleanStr(line, opts)
   return line
 end
 
-function M.tablelength(T)
+function M.count(T)
   local count = 0
   for _ in pairs(T) do count = count + 1 end
   return count
 end
-
-
 
 return M

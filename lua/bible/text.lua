@@ -20,11 +20,7 @@ end
 
 function Text:render(str, group, opts)
   -- clean up the string for us
-  for k, v in ipairs(str) do
-    if str[k] then
-      -- str[k] = str[k]:gsub("[\n]", " ")
-    end
-  end
+  str = str:gsub("[\n]", " ")
 
   if type(opts) == "string" then
     opts = { append = opts }
@@ -47,8 +43,7 @@ function Text:render(str, group, opts)
     table.insert(self.hl, hl)
   end
   -- creating a full text for now
-  local str_concat = table.concat(str, "")
-  self.current = self.current .. str_concat
+  self.current = self.current .. str
   if opts.append then
     self.current = self.current .. opts.append
   end
