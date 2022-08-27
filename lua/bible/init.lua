@@ -123,11 +123,11 @@ function Bible.action(action)
   end
   if action == "next" then
     view:next_item()
-    -- return Bible
+    return Bible
   end
   if action == "previous" then
     view:previous_item()
-    -- return Bible
+    return Bible
   end
 
   -- if action == "toggle_preview" then

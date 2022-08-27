@@ -70,6 +70,7 @@ function View:new(opts)
     win = opts.win or vim.api.nvim_get_current_win(),
     parent = opts.parent,
     items = {},
+    cached_results = {},
     group = group,
   }
   -- Print(this)
@@ -122,9 +123,11 @@ function View:is_valid()
 end
 
 function View:update(results, opts)
+  local results = results or self.cached_results
   opts = opts or {}
   util.debug("update")
   renderer.render(self, results, opts)
+  self.cached_results = results
 end
 
 -- set up a the view and create bindings associated to actions
@@ -394,7 +397,7 @@ function View:next_item(opts)
   opts = opts or { skip_groups = false }
   local line = self:get_line()
   for i = line + 1, vim.api.nvim_buf_line_count(self.buf), 1 do
-    if self.items[i] and not (opts.skip_groups and self.items[i].is_file) then
+    if self.items[i] and not (opts.skip_groups and self.items[i].is_grouped) then
       vim.api.nvim_win_set_cursor(self.win, { i, self:get_col() })
       if opts.jump then
         self:jump()
@@ -408,7 +411,7 @@ function View:previous_item(opts)
   opts = opts or { skip_groups = false }
   local line = self:get_line()
   for i = line - 1, 0, -1 do
-    if self.items[i] and not (opts.skip_groups and self.items[i].is_file) then
+    if self.items[i] and not (opts.skip_groups and self.items[i].is_grouped) then
       vim.api.nvim_win_set_cursor(self.win, { i, self:get_col() })
       if opts.jump then
         self:jump()
@@ -440,8 +443,8 @@ function View:jump(opts)
     return
   end
 
-  if item.is_file == true then
-    folds.toggle(item.filename)
+  if item.is_grouped == true then
+    folds.toggle(item.name)
     self:update()
   else
     util.jump_to_item(opts.win or self.parent, opts.precmd, item)
@@ -464,7 +467,7 @@ function View:_preview()
   end
   util.debug("preview")
 
-  if item.is_file ~= true then
+  if item.is_grouped ~= true then
     vim.api.nvim_win_set_buf(self.parent, item.bufnr)
     vim.api.nvim_win_set_cursor(self.parent, { item.start.line + 1, item.start.character })
 

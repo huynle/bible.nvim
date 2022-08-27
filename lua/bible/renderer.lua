@@ -34,7 +34,7 @@ end
 ---@param items Item[]
 ---@param filename string
 function renderer.render_group(view, text, name, items)
-  view.items[text.lineNr + 1] = { name = name, is_file = true }
+  view.items[text.lineNr + 1] = { name = name, is_grouped = true }
 
   if view.group.enabled == true then
     local count = util.count(items)
