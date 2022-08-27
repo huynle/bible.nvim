@@ -60,6 +60,7 @@ function M.get(query, provider_options, cb)
 
   -- local name = options.mode
   local provider = M.get_provider()
+  provider.setup(provider_options)
 
   local queries = util.splitStr(query, { sep = ";" })
   -- local verse = Verse:new()
@@ -81,29 +82,56 @@ function M.get(query, provider_options, cb)
   cb(items)
 end
 
-function M:group(items, opts)
+-- expect list of group by options
+function M:group_by(items, opts)
+  --FIXME: expand this later
+  local grouped
+  for i, group_by in pairs(opts.group_by) do
+    grouped = self:group(items, group_by)
+  end
+  return grouped
+end
+
+function M:group_og(items, group_by)
   --- STOPPED HERE
   -- grouping -- maybe for chapter
   local keys = {}
   local keyid = 0
   local groups = {}
-  -- for _, item in ipairs(items) do
   for _, item in pairs(items) do
-    -- if groups[item.chapter] == nil then
-    --   groups[item.chapter] = { book = item.chapter, items = {} }
-    --   keys[item.chapter] = keyid
-    --   keyid = keyid + 1
-    -- end
-    -- table.insert(groups[item.chapter].items, item)
-    local group_by = item[opts.group_by]
-
     if groups[group_by] == nil then
       groups[group_by] = { name = group_by, items = {} }
       keys[group_by] = keyid
       keyid = keyid + 1
     end
     table.insert(groups[group_by].items, item)
+  end
 
+  local ret = {}
+  for _, group in pairs(groups) do
+    table.insert(ret, group)
+  end
+  table.sort(ret, function(a, b)
+    return keys[a.name] < keys[b.name]
+  end)
+  return ret
+end
+
+function M:group(items, group_by)
+  --- STOPPED HERE
+  -- grouping -- maybe for chapter
+  local keys = {}
+  local keyid = 0
+  local groups = {}
+  for _, item in pairs(items) do
+    local group_name = item[group_by] or "None"
+    -- create group in groups and key to track group
+    if groups[group_name] == nil then
+      groups[group_name] = { name = group_name, items = {} }
+      keys[group_name] = keyid
+      keyid = keyid + 1
+    end
+    table.insert(groups[group_name].items, item)
   end
 
   local ret = {}

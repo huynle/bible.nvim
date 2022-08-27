@@ -20,7 +20,9 @@ local defaults = {
   display = true,
   group = {
     enabled = true,
-    group_by = "name"
+    group_by = {
+      "version" -- there should be only one in here right now
+    }
   }, -- group results by file
   padding = true, -- add an extra new line on top of the list
   position = "right", -- position of the list can be: bottom, top, left, right

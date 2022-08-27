@@ -33,7 +33,7 @@ end
 ---@param text Text
 ---@param items Item[]
 ---@param filename string
-function renderer.render_file(view, text, name, items)
+function renderer.render_group(view, text, name, items)
   view.items[text.lineNr + 1] = { name = name, is_file = true }
 
   if view.group.enabled == true then
@@ -66,7 +66,7 @@ end
 function renderer.render(view, results, opts)
   opts = opts or {}
   local buf = vim.api.nvim_win_get_buf(view.parent)
-  local grouped = providers:group(results, view.group)
+  local grouped = providers:group_by(results, view.group)
   local count = util.count(grouped)
 
   -- check for auto close
@@ -99,7 +99,7 @@ function renderer.render(view, results, opts)
     if opts.close_folds then
       folds.close(group.name)
     end
-    renderer.render_file(view, text, group.name, group.items)
+    renderer.render_group(view, text, group.name, group.items)
   end
 
 
@@ -113,8 +113,8 @@ end
 ---@param text Text
 ---@param items Item[]
 function renderer.render_verse(view, text, items)
-  for _, diag in ipairs(items) do
-    view.items[text.lineNr + 1] = diag
+  for _, item in ipairs(items) do
+    view.items[text.lineNr + 1] = item
 
     -- local sign = diag.sign or signs[string.lower(diag.type)]
     -- if not sign then
@@ -131,15 +131,15 @@ function renderer.render_verse(view, text, items)
     text:render(indent, "Indent")
     -- text:render(sign .. "  ", sign_hl, { exact = true })
     -- text:render(diag.text, "Text" .. diag.type, " ")
-    text:render(diag.value)
+    text:render(item.value)
+
     -- text:render(diag.type, diag.type, " ")
 
-    -- if diag.source then
-    --   text:render(diag.source, "Source")
-    -- end
-    -- if diag.code and diag.code ~= vim.NIL then
-    --   text:render(" (" .. diag.code .. ")", "Code")
-    -- end
+    if item.commentary then
+      text:nl()
+      text:render(indent, "Indent")
+      text:render(item.commentary, "Commentary")
+    end
 
     text:render(" ")
 

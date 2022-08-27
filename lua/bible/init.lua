@@ -65,6 +65,11 @@ function Bible.close()
   end
 end
 
+function Bible.realistic_func()
+  local buf = vim.api.nvim_create_buf(false, true)
+  vim.api.nvim_command("sbuffer " .. buf)
+end
+
 function Bible.action(action)
   Print("GOT HERE " .. action)
   -- if action == "toggle_mode" then

@@ -59,8 +59,9 @@ function M:lookup_verse(query, provider_options)
 
   local final_result = {
     name = query,
+    chapter = "",
     verses = {},
-    commentary = "some comments",
+    commentary = "",
     value = table.concat(result, " "),
     -- value = result,
     version = options.version,
