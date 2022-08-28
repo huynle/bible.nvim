@@ -164,6 +164,7 @@ function renderer.render_attr(view, text, name, item, indent_count)
 
   else
     view.items[text.lineNr + 1] = item
+    text:render(" ")
     local indent = string.rep("     ", indent_count)
     if config.options.indent_lines then
       indent = string.rep(" │   ", indent_count)
