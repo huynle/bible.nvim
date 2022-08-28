@@ -59,9 +59,13 @@ function M:lookup_verse(query, provider_options)
 
   local final_result = {
     name = query,
-    verses = {},
-    commentary = "some comments",
-    value = table.concat(result, " "),
+    verses = { table.concat(result, " ") },
+    commentary = { "some comments1", "some more comments 2" },
+    TESTING = {
+      ANOTHER1 = { "OTHER comments1", "some OTHER comments 2" },
+      -- ANOTHER2 = { "OTHER comments1", "some OTHER comments 2" },
+    },
+    -- value = table.concat(result, " "),
     -- value = result,
     version = options.version,
   }

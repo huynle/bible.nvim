@@ -57,9 +57,10 @@ function renderer.render_group(view, text, name, items)
     text:nl()
   end
 
-  if not folds.is_folded(name) then
-    renderer.render_verse(view, text, items)
-  end
+  -- if not folds.is_folded(name) then
+  --   -- renderer.render_verse(view, text, items)
+  --   renderer.render_attr(view, text, name, items)
+  -- end
 end
 
 ---@param view BibleView
@@ -100,6 +101,7 @@ function renderer.render(view, results, opts)
       folds.close(group.name)
     end
     renderer.render_group(view, text, group.name, group.items)
+    renderer.render_attr(view, text, group.name, group.items, 0)
   end
 
 
@@ -109,43 +111,83 @@ function renderer.render(view, results, opts)
   end
 end
 
----@param view TroubleView
----@param text Text
----@param items Item[]
-function renderer.render_verse(view, text, items)
-  for _, item in ipairs(items) do
+function renderer.render_attr(view, text, name, item, indent_count)
+  indent_count = indent_count or 0
+  if type(item) == "table" then
+    if not util.is_array(item) then
+      local ignore_list = { name = true, version = true }
+
+      for key, val in pairs(item) do
+        -- local group_name = attr.name .. "|" .. key
+        local group_name = key
+        if not ignore_list[key] then
+
+          view.items[text.lineNr + 1] = { name = group_name, is_grouped = true }
+
+          if view.group.enabled == true then
+            local count = util.count(item)
+
+            text:render(" ")
+            local indent = string.rep("     ", indent_count)
+            if config.options.indent_lines then
+              indent = string.rep(" │   ", indent_count)
+            end
+            text:render(indent)
+
+            if folds.is_folded(group_name) then
+              text:render(config.options.fold_closed, "FoldIcon", " ")
+            else
+              text:render(config.options.fold_open, "FoldIcon", " ")
+            end
+
+            if config.options.icons then
+              local icon, icon_hl = get_icon(group_name)
+              text:render(icon, icon_hl, { exact = true, append = " " })
+            end
+
+            text:render(group_name, " ")
+            -- text:render(" " .. count .. " ", "Count")
+            text:nl()
+          end
+
+          if not folds.is_folded(group_name) then
+            renderer.render_attr(view, text, key, val, indent_count)
+          end
+        end
+      end
+
+    else
+      for _, val in pairs(item) do
+        renderer.render_attr(view, text, name, val, indent_count + 1)
+      end
+    end
+
+  else
     view.items[text.lineNr + 1] = item
-
-    -- local sign = diag.sign or signs[string.lower(diag.type)]
-    -- if not sign then
-    --   sign = diag.type
-    -- end
-
-    local indent = "     "
+    local indent = string.rep("     ", indent_count)
     if config.options.indent_lines then
-      indent = " │   "
+      indent = string.rep(" │   ", indent_count)
     end
-
-    -- local sign_hl = diag.sign_hl or ("TroubleSign" .. diag.type)
-
+    -- text:nl()
     text:render(indent, "Indent")
-    -- text:render(sign .. "  ", sign_hl, { exact = true })
-    -- text:render(diag.text, "Text" .. diag.type, " ")
-    text:render(item.value)
-
-    -- text:render(diag.type, diag.type, " ")
-
-    if item.commentary then
-      text:nl()
-      text:render(indent, "Indent")
-      text:render(item.commentary, "Commentary")
-    end
-
+    text:render(item, name)
     text:render(" ")
-
-    -- text:render("[" .. diag.lnum .. ", " .. diag.col .. "]", "Location")
     text:nl()
   end
 end
+
+-- function renderer.render_verse(view, text, items)
+--   for _, item in ipairs(items) do
+--     -- view.items[text.lineNr + 1] = item
+--     -- local indent = "     "
+--     -- if config.options.indent_lines then
+--     --   indent = " │   "
+--     -- end
+--     -- text:render(indent, "Indent")
+--     -- text:render(item.value)
+--     renderer.render_attr(view, text, "Verse", item.value)
+--     renderer.render_attr(view, text, "Commentary", item.commentary)
+--   end
+-- end
 
 return renderer

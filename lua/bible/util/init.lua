@@ -167,4 +167,13 @@ function M.count(T)
   return count
 end
 
+function M.is_array(t)
+  local i = 0
+  for _ in pairs(t) do
+    i = i + 1
+    if t[i] == nil then return false end
+  end
+  return true
+end
+
 return M
