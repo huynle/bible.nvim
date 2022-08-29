@@ -44,25 +44,37 @@ function Bible.setup(options)
   print("sourced bible")
 end
 
-local view
+local views = {}
 
 local function is_open()
+  local view = views[vim.api.nvim_get_current_buf()]
   return view and view:is_valid()
 end
 
 function Bible.open(query, provider_options)
   -- local opts = get_opts(...)
   require("bible.providers").get(query, provider_options, function(results)
-    view = View.create(config.options)
+    local view = View.create(config.options, query)
+    views[view.buf] = view
     view:update(results)
   end)
 end
 
 function Bible.close()
   Print("got to close")
+  local view = views[vim.api.nvim_get_current_buf()]
   if is_open() then
     view:close()
   end
+end
+
+function Bible.yank()
+  Print("got to yan")
+  local view = views[vim.api.nvim_get_current_buf()]
+  local item = view:current_item()
+  -- if is_open() then
+  --   view:close()
+  -- end
 end
 
 function Bible.realistic_func()
@@ -71,7 +83,8 @@ function Bible.realistic_func()
 end
 
 function Bible.action(action)
-  Print("GOT HERE " .. action)
+  -- Print("GOT HERE " .. action)
+  local view = views[vim.api.nvim_get_current_buf()]
   -- if action == "toggle_mode" then
   --   if config.options.mode == "document_diagnostics" then
   --     config.options.mode = "workspace_diagnostics"

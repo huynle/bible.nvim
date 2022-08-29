@@ -27,9 +27,11 @@ local function clear_hl(bufnr)
 end
 
 ---Find a rogue Bible buffer that might have been spawned by i.e. a session.
-local function find_rogue_buffer()
+local function find_rogue_buffer(name)
   for _, v in ipairs(vim.api.nvim_list_bufs()) do
-    if vim.fn.bufname(v) == "Bible" then
+    -- if vim.fn.bufname(v) == "Bible" then
+    local v_name = vim.fn.bufname(v)
+    if string.find(v_name, name) then
       return v
     end
   end
@@ -38,8 +40,9 @@ end
 
 ---Find pre-existing Bible buffer, delete its windows then wipe it.
 ---@private
-local function wipe_rogue_buffer()
-  local bn = find_rogue_buffer()
+local function wipe_rogue_buffer(name)
+  name = name or "Bible"
+  local bn = find_rogue_buffer(name)
   if bn then
     local win_ids = vim.fn.win_findbuf(bn)
     for _, id in ipairs(win_ids) do
@@ -55,8 +58,9 @@ local function wipe_rogue_buffer()
   end
 end
 
-function View:new(opts)
+function View:new(opts, name)
   opts = opts or {}
+  name = name or ""
 
   local group
   if opts.group ~= nil then
@@ -66,6 +70,7 @@ function View:new(opts)
   end
 
   local this = {
+    name = name,
     buf = vim.api.nvim_get_current_buf(),
     win = opts.win or vim.api.nvim_get_current_win(),
     parent = opts.parent,
@@ -139,13 +144,20 @@ function View:setup(opts)
 
 
   -- note: taken out for now, no need since we have `bufhidden` = `wipe`
-  if not pcall(vim.api.nvim_buf_set_name, self.buf, "Bible") then
-    wipe_rogue_buffer()
-    vim.api.nvim_buf_set_name(self.buf, "Bible")
+  local buf_name = "Bible|" .. self.name
+  if not pcall(vim.api.nvim_buf_set_name, self.buf, buf_name) then
+    wipe_rogue_buffer(buf_name)
+    vim.api.nvim_buf_set_name(self.buf, buf_name)
+    -- util.jump_to_item(opts.win or self.parent, opts.precmd, item)
+    -- local bn = find_rogue_buffer(buf_name)
+    -- local win_ids = vim.fn.win_findbuf(bn)
+    -- self.switch_to(win_ids[1])
+    -- vim.api.nvim_win_set_cursor(win_ids[1])
+    -- return
   end
 
   -- destroy buf when hidden
-  self:set_option("bufhidden", "wipe")
+  -- self:set_option("bufhidden", "wipe")
   self:set_option("buftype", "nofile")
   self:set_option("swapfile", false)
   self:set_option("buflisted", false)
@@ -356,8 +368,9 @@ function View:close()
   end
 end
 
-function View.create(options)
+function View.create(options, name)
   options = options or {}
+  name = name or ""
   if options.win then
     View.switch_to(options.win)
     vim.cmd("enew")
@@ -366,7 +379,7 @@ function View.create(options)
     local pos = { bottom = "J", top = "K", left = "H", right = "L" }
     vim.cmd("wincmd " .. (pos[config.options.position] or "K"))
   end
-  local buffer = View:new(options)
+  local buffer = View:new(options, name)
   buffer:setup(options)
 
   if options and options.auto then

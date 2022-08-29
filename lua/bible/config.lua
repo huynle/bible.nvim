@@ -50,13 +50,15 @@ local defaults = {
     toggle_fold = { "zA", "za" }, -- toggle fold of current file
     previous = "k", -- preview item
     next = "j", -- next item
+    yank = "y", -- yank item
   },
   indent_lines = true, -- add an indent guide below the fold icons
   auto_open = false, -- automatically open the list when you have diagnostics
   auto_close = false, -- automatically close the list when you have no diagnostics
-  auto_preview = true, -- automatically preview the location of the diagnostic. <esc> to close preview and go back to last window
+  auto_preview = false, -- automatically preview the location of the diagnostic. <esc> to close preview and go back to last window
   auto_fold = false, -- automatically fold a file trouble list at creation
   auto_jump = { "lsp_definitions" }, -- for the given modes, automatically jump if there is only a single result
+  auto_create = true, -- for the given modes, automatically jump if there is only a single result
   signs = {
     -- icons / text used for a diagnostic
     error = "",

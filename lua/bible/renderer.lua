@@ -53,7 +53,7 @@ function renderer.render_group(view, text, name, items)
     end
 
     text:render(name, " ")
-    text:render(" " .. count .. " ", "Count")
+    -- text:render(" " .. count .. " ", "Count")
     text:nl()
   end
 
@@ -118,8 +118,8 @@ function renderer.render_attr(view, text, name, item, indent_count)
       local ignore_list = { name = true, version = true }
 
       for key, val in pairs(item) do
-        -- local group_name = attr.name .. "|" .. key
-        local group_name = key
+        local group_name = item.name .. "|" .. key
+        -- local group_name = key
         if not ignore_list[key] then
 
           view.items[text.lineNr + 1] = { name = group_name, is_grouped = true }
