@@ -54,9 +54,16 @@ end
 function Bible.open(query, provider_options)
   -- local opts = get_opts(...)
   require("bible.providers").get(query, provider_options, function(results)
-    local view = View.create(config.options, query)
-    views[view.buf] = view
-    view:update(results)
+    -- local view = View.create(config.options, query)
+    local view = View.create(views, config.options)
+
+    if not views[view.buf] then
+      views[view.buf] = view
+      view:update(results)
+    else
+      view.switch_to(view.win)
+    end
+
   end)
 end
 
