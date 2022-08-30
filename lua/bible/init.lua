@@ -2,6 +2,7 @@ local dev = require("hle.util.dev")
 local config = require("bible.config")
 local providers = require("bible.providers")
 local View = require("bible.view")
+local util = require("bible.util")
 
 
 local Bible = {}
