@@ -50,7 +50,7 @@ local function wipe_rogue_buffer(name)
         vim.api.nvim_win_close(id, true)
       end
     end
-    -- Print("trying to wipe buf " .. bn)
+    Print("trying to wipe buf " .. bn)
     vim.api.nvim_buf_set_name(bn, "")
     vim.schedule(function()
       pcall(vim.api.nvim_buf_delete, bn, {})
@@ -60,6 +60,7 @@ end
 
 function View:new(opts, name)
   opts = opts or {}
+  name = name or ""
 
   local group
   if opts.group ~= nil then
@@ -95,10 +96,10 @@ function View:render(text)
   self:unlock()
   self:set_lines(text.lines)
   self:lock()
-  clear_hl(self.buf)
-  for _, data in ipairs(text.hl) do
-    highlight(self.buf, config.namespace, data.group, data.line, data.from, data.to)
-  end
+  -- clear_hl(self.buf)
+  -- for _, data in ipairs(text.hl) do
+  --   highlight(self.buf, config.namespace, data.group, data.line, data.from, data.to)
+  -- end
 end
 
 function View:clear()
@@ -135,7 +136,7 @@ function View:update(results, opts)
 end
 
 -- set up a the view and create bindings associated to actions
-function View:setup(opts)
+function View:setup(opts, buf_name)
   util.debug("setup")
   opts = opts or {}
   vim.cmd("setlocal nonu")
@@ -143,25 +144,19 @@ function View:setup(opts)
 
 
   -- note: taken out for now, no need since we have `bufhidden` = `wipe`
-  local buf_name
-  if self.name then
-    buf_name = "Bible" .. "|" .. self.name
-  else
-    buf_name = "Bible"
-  end
-
   if not pcall(vim.api.nvim_buf_set_name, self.buf, buf_name) then
-    -- wipe_rogue_buffer(buf_name)
-    -- vim.api.nvim_buf_set_name(self.buf, buf_name)
+    wipe_rogue_buffer(buf_name)
+    vim.api.nvim_buf_set_name(self.buf, buf_name)
     -- util.jump_to_item(opts.win or self.parent, opts.precmd, item)
     -- local bn = find_rogue_buffer(buf_name)
     -- local win_ids = vim.fn.win_findbuf(bn)
+    -- self.switch_to(win_ids[1])
     -- vim.api.nvim_win_set_cursor(win_ids[1])
-    return
+    -- return
   end
 
   -- destroy buf when hidden
-  self:set_option("bufhidden", "wipe")
+  -- self:set_option("bufhidden", "wipe")
   self:set_option("buftype", "nofile")
   self:set_option("swapfile", false)
   self:set_option("buflisted", false)
@@ -210,6 +205,7 @@ function View:setup(opts)
         autocmd BufEnter <buffer> lua require("bible").action("on_enter")
         " autocmd CursorMoved <buffer> lua require("bible").action("auto_preview")
         autocmd BufLeave <buffer> lua require("bible").action("on_leave")
+        autocmd Winclosed <buffer> lua require("bible").action("close")
       augroup END
     ]],
     false
@@ -372,16 +368,14 @@ function View:close()
   end
 end
 
-function View.create(views, options, name)
+function View.create(options, name, views)
   options = options or {}
+  local buf_name = "Bible|" .. name
+  -- local buf_name = "Bible"
 
-  local buffer = View:new(options, name)
-  buffer:setup(options)
-
-  if views[buffer.buf] then
-    return buffer
+  if views[buf_name] then
+    return views[buf_name]
   end
-
 
   if options.win then
     View.switch_to(options.win)
@@ -391,7 +385,9 @@ function View.create(views, options, name)
     local pos = { bottom = "J", top = "K", left = "H", right = "L" }
     vim.cmd("wincmd " .. (pos[config.options.position] or "K"))
   end
-
+  local buffer = View:new(options, buf_name)
+  views[buf_name] = buffer
+  buffer:setup(options, buf_name)
 
   if options and options.auto then
     buffer:switch_to_parent()
@@ -478,6 +474,10 @@ end
 function View:toggle_fold()
   folds.toggle(self:current_item().filename)
   self:update()
+end
+
+function View:is_open()
+  return self and self:is_valid()
 end
 
 function View:_preview()

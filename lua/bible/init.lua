@@ -46,31 +46,24 @@ end
 
 local views = {}
 
-local function is_open()
-  local view = views[vim.api.nvim_get_current_buf()]
-  return view and view:is_valid()
-end
+-- local function is_open()
+--   local view = views[vim.fn.bufname()]
+--   return view and view:is_valid()
+-- end
 
 function Bible.open(query, provider_options)
   -- local opts = get_opts(...)
   require("bible.providers").get(query, provider_options, function(results)
-    -- local view = View.create(config.options, query)
-    local view = View.create(views, config.options)
-
-    if not views[view.buf] then
-      views[view.buf] = view
-      view:update(results)
-    else
-      view.switch_to(view.win)
-    end
-
+    local view = View.create(config.options, query, views)
+    view:update(results, { focus = false })
   end)
 end
 
 function Bible.close()
   Print("got to close")
-  local view = views[vim.api.nvim_get_current_buf()]
-  if is_open() then
+  -- local view = views[vim.api.nvim_get_current_buf()]
+  -- local buf_name = vim.fn.bufname()
+  if view:is_open() then
     view:close()
   end
 end
@@ -90,8 +83,9 @@ function Bible.realistic_func()
 end
 
 function Bible.action(action)
-  -- Print("GOT HERE " .. action)
-  local view = views[vim.api.nvim_get_current_buf()]
+  Print("GOT HERE " .. action)
+  local buf_name = vim.fn.bufname()
+  local view = views[buf_name]
   -- if action == "toggle_mode" then
   --   if config.options.mode == "document_diagnostics" then
   --     config.options.mode = "workspace_diagnostics"
@@ -104,7 +98,7 @@ function Bible.action(action)
   if view and action == "on_win_enter" then
     view:on_win_enter()
   end
-  if not is_open() then
+  if not view:is_open() then
     return Bible
   end
   -- if action == "hover" then
@@ -137,6 +131,11 @@ function Bible.action(action)
   end
   if action == "on_leave" then
     view:on_leave()
+  end
+  if action == "close" then
+    view:close()
+    views[buf_name] = nil
+    return Bible
   end
   if action == "cancel" then
     view:switch_to_parent()

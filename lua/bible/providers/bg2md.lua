@@ -61,7 +61,7 @@ function M:lookup_verse(query, provider_options)
     name = query,
     -- verses = { table.concat(result, " ") },
     verses = result,
-    -- commentary = { "Go look at Gen1", "some thing with John3:16" },
+    commentary = { "Go look at Gen1", "some thing with John3:16" },
     -- TESTING = {
     --   ANOTHER1 = { "OTHER comments1", "some OTHER comments 2" },
     --   -- ANOTHER2 = { "OTHER comments1", "some OTHER comments 2" },
