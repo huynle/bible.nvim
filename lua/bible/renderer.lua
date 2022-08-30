@@ -53,14 +53,13 @@ function renderer.render_group(view, text, name, items)
     end
 
     text:render(name, " ")
-    -- text:render(" " .. count .. " ", "Count")
+    text:render(" " .. count .. " ", "Count")
     text:nl()
   end
 
-  -- if not folds.is_folded(name) then
-  --   -- renderer.render_verse(view, text, items)
-  --   renderer.render_attr(view, text, name, items)
-  -- end
+  if not folds.is_folded(name) then
+    renderer.render_attr(view, text, name, items, 0)
+  end
 end
 
 ---@param view BibleView
@@ -101,7 +100,6 @@ function renderer.render(view, results, opts)
       folds.close(group.name)
     end
     renderer.render_group(view, text, group.name, group.items)
-    renderer.render_attr(view, text, group.name, group.items, 0)
   end
 
 

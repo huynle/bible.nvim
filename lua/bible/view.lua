@@ -50,7 +50,7 @@ local function wipe_rogue_buffer(name)
         vim.api.nvim_win_close(id, true)
       end
     end
-    -- Print("trying to wipe buf " .. bn)
+    Print("trying to wipe buf " .. bn)
     vim.api.nvim_buf_set_name(bn, "")
     vim.schedule(function()
       pcall(vim.api.nvim_buf_delete, bn, {})
@@ -136,7 +136,7 @@ function View:update(results, opts)
 end
 
 -- set up a the view and create bindings associated to actions
-function View:setup(opts)
+function View:setup(opts, buf_name)
   util.debug("setup")
   opts = opts or {}
   vim.cmd("setlocal nonu")
@@ -144,7 +144,6 @@ function View:setup(opts)
 
 
   -- note: taken out for now, no need since we have `bufhidden` = `wipe`
-  local buf_name = "Bible|" .. self.name
   if not pcall(vim.api.nvim_buf_set_name, self.buf, buf_name) then
     wipe_rogue_buffer(buf_name)
     vim.api.nvim_buf_set_name(self.buf, buf_name)
@@ -206,6 +205,7 @@ function View:setup(opts)
         autocmd BufEnter <buffer> lua require("bible").action("on_enter")
         " autocmd CursorMoved <buffer> lua require("bible").action("auto_preview")
         autocmd BufLeave <buffer> lua require("bible").action("on_leave")
+        autocmd Winclosed <buffer> lua require("bible").action("close")
       augroup END
     ]],
     false
@@ -368,9 +368,15 @@ function View:close()
   end
 end
 
-function View.create(options, name)
+function View.create(options, name, views)
   options = options or {}
-  name = name or ""
+  local buf_name = "Bible|" .. name
+  -- local buf_name = "Bible"
+
+  if views[buf_name] then
+    return views[buf_name]
+  end
+
   if options.win then
     View.switch_to(options.win)
     vim.cmd("enew")
@@ -379,8 +385,9 @@ function View.create(options, name)
     local pos = { bottom = "J", top = "K", left = "H", right = "L" }
     vim.cmd("wincmd " .. (pos[config.options.position] or "K"))
   end
-  local buffer = View:new(options, name)
-  buffer:setup(options)
+  local buffer = View:new(options, buf_name)
+  views[buf_name] = buffer
+  buffer:setup(options, buf_name)
 
   if options and options.auto then
     buffer:switch_to_parent()
@@ -467,6 +474,10 @@ end
 function View:toggle_fold()
   folds.toggle(self:current_item().filename)
   self:update()
+end
+
+function View:is_open()
+  return self and self:is_valid()
 end
 
 function View:_preview()
