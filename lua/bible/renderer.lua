@@ -53,7 +53,7 @@ function renderer.render_group(view, text, name, items)
     end
 
     text:render(name, " ")
-    text:render(" " .. count .. " ", "Count")
+    -- text:render(" " .. count .. " ", "Count")
     text:nl()
   end
 

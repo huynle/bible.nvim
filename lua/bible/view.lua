@@ -96,10 +96,10 @@ function View:render(text)
   self:unlock()
   self:set_lines(text.lines)
   self:lock()
-  clear_hl(self.buf)
-  for _, data in ipairs(text.hl) do
-    highlight(self.buf, config.namespace, data.group, data.line, data.from, data.to)
-  end
+  -- clear_hl(self.buf)
+  -- for _, data in ipairs(text.hl) do
+  --   highlight(self.buf, config.namespace, data.group, data.line, data.from, data.to)
+  -- end
 end
 
 function View:clear()

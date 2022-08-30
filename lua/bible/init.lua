@@ -55,7 +55,7 @@ function Bible.open(query, provider_options)
   -- local opts = get_opts(...)
   require("bible.providers").get(query, provider_options, function(results)
     local view = View.create(config.options, query, views)
-    view:update(results)
+    view:update(results, { focus = false })
   end)
 end
 
