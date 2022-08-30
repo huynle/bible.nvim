@@ -50,7 +50,7 @@ local function wipe_rogue_buffer(name)
         vim.api.nvim_win_close(id, true)
       end
     end
-    Print("trying to wipe buf " .. bn)
+    util.debug("trying to wipe buf " .. bn)
     vim.api.nvim_buf_set_name(bn, "")
     vim.schedule(function()
       pcall(vim.api.nvim_buf_delete, bn, {})

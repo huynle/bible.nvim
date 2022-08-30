@@ -60,7 +60,7 @@ function Bible.open(query, provider_options)
 end
 
 function Bible.close()
-  Print("got to close")
+  util.debug("got to close")
   -- local view = views[vim.api.nvim_get_current_buf()]
   -- local buf_name = vim.fn.bufname()
   if view:is_open() then
@@ -69,7 +69,7 @@ function Bible.close()
 end
 
 function Bible.yank()
-  Print("got to yan")
+  util.debug("got to yan")
   local view = views[vim.api.nvim_get_current_buf()]
   local item = view:current_item()
   -- if is_open() then
@@ -83,7 +83,7 @@ function Bible.realistic_func()
 end
 
 function Bible.action(action)
-  Print("GOT HERE " .. action)
+  util.debug("GOT HERE " .. action)
   local buf_name = vim.fn.bufname()
   local view = views[buf_name]
   -- if action == "toggle_mode" then
@@ -164,7 +164,7 @@ function Bible.action(action)
   --   view:preview()
   -- end
 
-  -- Print("again...")
+  --util.debug("again...")
 
   if Bible[action] then
     Bible[action]()

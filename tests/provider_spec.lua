@@ -76,7 +76,7 @@ describe("providers", function()
     table.insert(results, result2)
     table.insert(results, result3)
     local grouped = providers:group(results, "version")
-    Print(grouped)
+    util.debug(grouped)
     eq(util.count(grouped), 2)
   end)
 
