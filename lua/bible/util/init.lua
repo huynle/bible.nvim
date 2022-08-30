@@ -1,4 +1,22 @@
+local config = require("bible.config")
+
 local M = {}
+
+function M.jump_to_item(win, precmd, item)
+  -- requiring here, as otherwise we run into a circular dependency
+  local View = require("bible.view")
+
+  View.switch_to(win)
+  if precmd then
+    vim.cmd(precmd)
+  end
+  if vim.api.nvim_buf_get_option(item.bufnr, "buflisted") == false then
+    vim.cmd("edit #" .. item.bufnr)
+  else
+    vim.cmd("buffer " .. item.bufnr)
+  end
+  vim.api.nvim_win_set_cursor(win, { item.start.line + 1, item.start.character })
+end
 
 ---Finds the root directory of the notebook of the given path
 --
@@ -64,7 +82,7 @@ function M.get_text_in_range(range)
   if vim.tbl_isempty(lines) then
     return nil
   end
-  local MAX_STRING_SUB_INDEX = 2^31 - 1 -- LuaJIT only supports 32bit integers for `string.sub` (in block selection B.character is 2^31)
+  local MAX_STRING_SUB_INDEX = 2 ^ 31 - 1 -- LuaJIT only supports 32bit integers for `string.sub` (in block selection B.character is 2^31)
   lines[#lines] = string.sub(lines[#lines], 1, math.min(B.character, MAX_STRING_SUB_INDEX))
   lines[1] = string.sub(lines[1], math.min(A.character + 1, MAX_STRING_SUB_INDEX))
   return table.concat(lines, "\n")
@@ -94,7 +112,6 @@ function M.get_selected_range()
   }
 end
 
-
 function M.warn(msg)
   vim.notify(msg, vim.log.levels.WARN, { title = "Trouble" })
 end
@@ -104,10 +121,75 @@ function M.error(msg)
 end
 
 function M.debug(msg)
-  if config.options.debug then
+  if config.debug then
     vim.notify(msg, vim.log.levels.DEBUG, { title = "Trouble" })
   end
 end
 
+function M.throttle(ms, fn)
+  local timer = vim.loop.new_timer()
+  local running = false
+  return function(...)
+    if not running then
+      local argv = { ... }
+      local argc = select("#", ...)
+
+      timer:start(ms, 0, function()
+        running = false
+        pcall(vim.schedule_wrap(fn), unpack(argv, 1, argc))
+      end)
+      running = true
+    end
+  end
+end
+
+function M.splitStr(inputstr, opts)
+  opts = vim.tbl_deep_extend("force", {
+    sep = "%s",
+    clean_before = true,
+    clean_after = true,
+  }, opts)
+  -- return an ordered table, or key and its index
+  local t = {}
+  for str in string.gmatch(inputstr, "([^" .. opts.sep .. "]+)") do
+    str = M.cleanStr(str, opts)
+    if str ~= "" then
+      t[#t + 1] = str
+    end
+  end
+  return t
+end
+
+function M.cleanStr(line, opts)
+  opts = vim.tbl_deep_extend("force", {
+    clean_before = false,
+    clean_after = true,
+  }, opts)
+
+  if opts.clean_before then
+    line = line:gsub("^%s+", "")
+  end
+
+  if opts.clean_after then
+    line = line:gsub("%s+$", "")
+  end
+  -- strip ending spaces from line
+  return line
+end
+
+function M.count(T)
+  local count = 0
+  for _ in pairs(T) do count = count + 1 end
+  return count
+end
+
+function M.is_array(t)
+  local i = 0
+  for _ in pairs(t) do
+    i = i + 1
+    if t[i] == nil then return false end
+  end
+  return true
+end
 
 return M
