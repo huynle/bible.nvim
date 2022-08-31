@@ -192,4 +192,8 @@ function M.is_array(t)
   return true
 end
 
+function M.isempty(s)
+  return s == nil or s == ''
+end
+
 return M

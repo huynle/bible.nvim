@@ -49,8 +49,8 @@ local function break_verse(line)
   return verses
 end
 
-function M:lookup_verse(query, provider_options)
-
+function M:lookup_verse(query, provider_options, cb)
+  provider_options = provider_options or {}
   local options = vim.tbl_extend("force", M.options, provider_options)
   local args = create_params(options)
   local result = vim.fn.systemlist('bg2md ' .. args .. " '" .. query .. "'")
@@ -112,7 +112,11 @@ function M:lookup_verse(query, provider_options)
   --   verses[#verses + 1] = break_verse(line)
   -- end
 
-  return final_result
+  if cb then
+    return cb(final_result)
+  else
+    return cb(final_result)
+  end
 end
 
 return M

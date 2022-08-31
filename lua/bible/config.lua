@@ -17,7 +17,7 @@ local defaults = {
       version = "NABRE",
     }
   },
-  display = true,
+  display = false,
   group = {
     enabled = true,
     group_by = {
@@ -25,9 +25,9 @@ local defaults = {
     }
   }, -- group results by file
   padding = false, -- add an extra new line on top of the list
-  position = "right", -- position of the list can be: bottom, top, left, right
+  position = "left", -- position of the list can be: bottom, top, left, right
   height = 10, -- height of the trouble list when position is top or bottom
-  width = 50, -- width of the list when position is left or right
+  width = 200, -- width of the list when position is left or right
   icons = false, -- use devicons for filenames
   mode = "bg2md", -- "workspace_diagnostics", "document_diagnostics", "quickfix", "lsp_references", "loclist"
   fold_open = "", -- icon used for open folds
@@ -50,7 +50,7 @@ local defaults = {
     toggle_fold = { "zA", "za" }, -- toggle fold of current file
     previous = "k", -- preview item
     next = "j", -- next item
-    yank = "y", -- yank item
+    -- yank = "y", -- yank item
   },
   indent_lines = true, -- add an indent guide below the fold icons
   auto_open = false, -- automatically open the list when you have diagnostics
