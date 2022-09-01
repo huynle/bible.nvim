@@ -1,3 +1,5 @@
+local parser = require("bible.providers.bg2md.formatter")
+
 local M = {}
 
 -- default options
@@ -49,27 +51,49 @@ local function break_verse(line)
   return verses
 end
 
+function M:format(result)
+  local final = {
+    query = {},
+    chapter = {},
+    verses = {},
+    footnotes = {},
+    crossrefs = {},
+    version = ""
+  }
+  local pattern
+  for _, line in ipairs(result.verses) do
+    pattern = parser.get_pattern(line) or pattern
+    local captures = parser.captures(pattern, line)
+    if pattern and captures then
+      table.insert(final[pattern], captures)
+    end
+  end
+  final.version = final["query"]["version"]
+  -- Print(final)
+  return final
+end
+
 function M:lookup_verse(query, provider_options, cb)
   provider_options = provider_options or {}
   local options = vim.tbl_extend("force", M.options, provider_options)
   local args = create_params(options)
   local result = vim.fn.systemlist('bg2md ' .. args .. " '" .. query .. "'")
-  local cleaned = {}
-  local verses = {}
+  -- local cleaned = {}
+  -- local verses = {}
 
-  local final_result = {
-    name = query,
-    -- verses = { table.concat(result, " ") },
-    verses = result,
-    commentary = { "Go look at Gen1", "some thing with John3:16" },
-    -- TESTING = {
-    --   ANOTHER1 = { "OTHER comments1", "some OTHER comments 2" },
-    --   -- ANOTHER2 = { "OTHER comments1", "some OTHER comments 2" },
-    -- },
-    -- value = table.concat(result, " "),
-    -- value = result,
-    version = options.version,
-  }
+  -- local final_result = {
+  --   name = query,
+  --   -- verses = { table.concat(result, " ") },
+  --   verses = result,
+  --   commentary = { "Go look at Gen1", "some thing with John3:16" },
+  --   -- TESTING = {
+  --   --   ANOTHER1 = { "OTHER comments1", "some OTHER comments 2" },
+  --   --   -- ANOTHER2 = { "OTHER comments1", "some OTHER comments 2" },
+  --   -- },
+  --   -- value = table.concat(result, " "),
+  --   -- value = result,
+  --   version = options.version,
+  -- }
 
   -- local final_result = {
   --   book = {
@@ -89,22 +113,22 @@ function M:lookup_verse(query, provider_options, cb)
   --   }
   -- }
 
-  local result_map = {
-    empty = 0,
-    verse = "%s+\\d+",
-    commentary = 2,
-  }
+  --   local result_map = {
+  --     empty = 0,
+  --     verse = "%s+\\d+",
+  --     commentary = 2,
+  --   }
 
-  local verse = {
-    version = "",
-    item = "",
-    commentary = "",
-    crossref = ""
-  }
+  --   local verse = {
+  --     version = "",
+  --     item = "",
+  --     commentary = "",
+  --     crossref = ""
+  --   }
 
-  local book = {
-    chapter = {},
-  }
+  --   local book = {
+  --     chapter = {},
+  --   }
 
   -- for _, line in ipairs(result) do
   --   assert(not string.find(line, "Error:"), "Could not find verse " .. line .. " CHANGE YOUR VERSION to see")
@@ -112,11 +136,11 @@ function M:lookup_verse(query, provider_options, cb)
   --   verses[#verses + 1] = break_verse(line)
   -- end
 
-  if cb then
-    return cb(final_result)
-  else
-    return cb(final_result)
-  end
+  -- if cb then
+  --   return cb(final_result)
+  -- else
+  return M:format(result)
+  -- end
 end
 
 return M
