@@ -30,41 +30,13 @@ function M.setup(options)
   end
 end
 
--- -- Interface for all added providers
--- -- Must implement these functions
--- function M:lookup_verse(cb, options)
---   local provider = M.get_provider(options)
-
---   local queries = util.splitStr(options.query, { sep = ";" })
-
---   local ordered_keys = {}
-
---   for k in pairs(queries) do
---     table.insert(ordered_keys, k)
---   end
-
---   table.sort(ordered_keys)
---   local verses = {}
---   for i = 1, #ordered_keys do
---     local k, v = ordered_keys[i], queries[ordered_keys[i]]
---     options.query = v
---     verses[v] = provider:lookup_verse(v, options)
---     cb(verses[v], options)
---   end
--- end
-
 ---@param options BibleOptions
 -- function M:get(query_opts, view)
 function M.get(query, provider_options, cb)
-  -- local options = vim.tbl_extend("force", config.options, options or {})
-
-  -- local name = options.mode
   local provider = M.get_provider()
   provider.setup(provider_options)
 
   local queries = util.splitStr(query, { sep = ";" })
-  -- local verse = Verse:new()
-
   local ordered_keys = {}
 
   for k in pairs(queries) do
@@ -75,9 +47,11 @@ function M.get(query, provider_options, cb)
   local items = {}
   for i = 1, #ordered_keys do
     local k, v = ordered_keys[i], queries[ordered_keys[i]]
-    items[v] = provider:lookup_verse(v, provider_options)
+    -- items[v] = provider:lookup_verse(v, provider_options)
+    table.insert(items, provider:lookup_verse(v, provider_options))
     -- view:render(verse:render(v))
   end
+  -- local results = { [query] = items }
 
   cb(items)
 end

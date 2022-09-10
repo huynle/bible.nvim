@@ -1,4 +1,59 @@
+local util = require("bible.util")
+
 local M = {}
+
+
+local function clean_line(line)
+  -- strip ending spaces from line
+  return line:gsub("%s+$", "")
+end
+
+function M.collect(result)
+  local final = {
+    query = {},
+    chapter = {},
+    verses = {},
+    footnotes = {},
+    crossrefs = {},
+    version = "NABRE",
+  }
+
+  -- final = vim.tbl_extend("force", final, result)
+
+  local pattern
+  for _, line in ipairs(result) do
+    pattern = M.get_pattern(line) or pattern
+    if not util.isempty(line) then
+      local captures = M.captures(pattern, line)
+      -- create entry for pattern
+      -- if not final[pattern] then
+      --   final[pattern] = {}
+      -- end
+
+      if pattern and not util.istableempty(captures) then
+        -- create entry for key
+        -- if captures.key and not final[pattern][captures.key] then
+        --   final[pattern][captures.key] = {}
+        --   table.insert(final[pattern][captures.key], captures.value)
+        --   table.insert(final[pattern][captures.key], captures.other)
+        -- end
+        table.insert(final[pattern], captures)
+      end
+    end
+  end
+
+  return final
+end
+
+function M.reorg(result)
+  local keys = { "chapter", "verses" }
+  return result
+end
+
+function M.bible_nvim(result)
+  local collected = M.collect(result)
+  return collected
+end
 
 function M.query(text)
   return string.match(text, "^# ([%w%d%s%:]+)%s")
@@ -24,21 +79,54 @@ function M.crossrefs(text)
   return array
 end
 
-function M.crossrefs_verses(text)
-  local array = {}
-  local possible = {
-    "([%–%-%d%:]+)[%;%.%s]?", -- regular verses 5:2-4
-    -- "(%a+)%s?([%–%-%d%:]+)", -- regular verses Dn 5:2-4
-    "(%a+)%s?([%–%-%d%:,%s]+)[%;%.%s]?", -- verses Neh 3:1, 32
-    "(%d[% ]%a+)%s?([%–%-%d%:]+)[%;%.%s]?", -- more complicated '1 Jn 5:2-4'
-    "(%d[%s]%a+)%s?([%–%-%d%:]+)[%;%.%s]?", -- more complicated '1 Jn 5:2-4'
-  }
-  for _, pattern in pairs(possible) do
-    for capture in string.gmatch(text, pattern) do
-      table.insert(array, capture)
+function M.crossrefs_verses(text, opts)
+  -- [^B]: Neh 3:1, 32; 12:39.
+  -- expected_return = { {
+  --   book_name = "Neh",
+  --   verses = { "3:1", "32" }
+  -- },{
+  --   verses = { "12:39" }
+  -- }}
+  -- 1. strip off the first 6 characters
+  -- 2. split the rest of the text into items
+  -- 3. loop through the items to get the verses
+  opts = opts or {}
+  local stripped = string.sub(text, 6)
+  local items = util.splitStr(stripped, { sep = ";" })
+  local ret = {}
+  for _, item in pairs(items) do
+    local out = M.get_verse_from_string(item, opts)
+    if not util.istableempty(out) then
+      table.insert(ret, out)
     end
   end
-  return array
+  return ret
+end
+
+function M.get_verse_from_string(text, opts)
+  opts = opts or {}
+  local ret = {
+    book_name = opts.book_name,
+    verses = {}
+  }
+  local verse_number_str = text
+  -- more complicated '1 Jn 5:2-4, 5'
+  local start_i, end_i
+  start_i, end_i, ret.book_name = string.find(text, "(%d?[% %s]?%a+)")
+
+  if start_i and end_i then
+    verse_number_str = string.sub(text, end_i + 1)
+  end
+
+  for capture in string.gmatch(verse_number_str, "([%–%-%d%:]+)") do
+    table.insert(ret.verses, capture)
+  end
+
+  if util.istableempty(ret.verses) then
+    return {}
+  end
+
+  return ret
 end
 
 function M.captures(pattern_name, text)
@@ -47,15 +135,42 @@ function M.captures(pattern_name, text)
     return {}
   end
 
-  for key, pattern in pairs(M.patterns[pattern_name].captures) do
+  ret = M._captures(M.patterns[pattern_name].captures, text)
+  return ret
+end
+
+-- traverse down a capture table
+function M._captures(capture_patterns, text)
+  local ret = {}
+  for key, pattern in pairs(capture_patterns) do
+    local val
+    local results
     if pattern == nil then
-      ret[key] = nil
+      val = nil
     elseif type(pattern) == "string" then
-      ret[key] = string.match(text, pattern)
+      results = string.match(text, pattern)
+      val = util.ternary(util.isempty(results), nil, results)
+    elseif type(pattern) == "table" then
+      if pattern.pattern then
+        results = string.match(text, pattern.pattern)
+        if pattern.callback then
+          results = pattern.callback(results)
+        end
+        val = util.ternary(util.isempty(results), nil, results)
+      else
+        -- recursive pattern table
+        local inside_pattern_result = M._captures(pattern, text)
+        val = util.ternary(util.istableempty(inside_pattern_result), nil, inside_pattern_result)
+      end
     elseif type(pattern) == "function" then
-      ret[key] = pattern(text)
+      results = pattern(text)
+      val = util.ternary(util.istableempty(results), nil, results)
+    end
+    if val then
+      ret[key] = val
     end
   end
+
   return ret
 end
 
@@ -75,8 +190,8 @@ M.patterns = {
       return string.match(text, "^# (.+)$")
     end,
     captures = {
-      query = "^# ([%w%d%s%:]+)%s",
-      version = "%((.+)%)"
+      id = "^# ([%w%d%s%:%-]+)%s",
+      value = "%((.+)%)",
     },
   },
   chapter = {
@@ -84,9 +199,12 @@ M.patterns = {
       return string.match(text, "^## (.+)$")
     end,
     captures = {
-      chapter = "^## ([%w%d%s]+)",
-      footnotes = M.footnotes,
-      crossrefs = M.crossrefs
+      id = "^## %w+%s(%d+)",
+      value = "^## ([%w%d%s]+)",
+      other = {
+        footnotes = M.footnotes,
+        crossrefs = M.crossrefs
+      }
     }
   },
   verses = {
@@ -94,9 +212,18 @@ M.patterns = {
       return string.match(text, "^###### (.+)$")
     end,
     captures = {
-      verse = "^###### (.+)$",
-      footnotes = M.footnotes,
-      crossrefs = M.crossrefs
+      value = {
+        pattern = "^######%s%d+%s(.+)$",
+        -- callback = clean_line
+      },
+      id = {
+        pattern = "^######%s(%d+)%s",
+        -- callback = tonumber
+      },
+      other = {
+        footnotes = M.footnotes,
+        crossrefs = M.crossrefs
+      }
     }
   },
   footnotes = {
@@ -104,9 +231,10 @@ M.patterns = {
       return string.match(text, "^### (Footnotes)$")
     end,
     captures = {
-      key = M.footnotes,
-      verses = "%s([%d%:%-]+)%s",
-      footnotes = "%s[%d%:%-]+%s(.+)$"
+      -- key = M.footnotes,
+      id = "%[%^(%l+)%]",
+      -- verses = "%s([%d%:%-]+)%s",
+      value = "%s[%d%:%-%–]+%s(.+)$"
     }
   },
   crossrefs = {
@@ -114,8 +242,10 @@ M.patterns = {
       return string.match(text, "^### (Crossrefs)$")
     end,
     captures = {
-      key = M.crossrefs,
-      verses = M.crossrefs_verses
+      -- crossrefs = M.crossrefs,
+      id = "%[%^(%u+)%]",
+      -- value = "%[%^(%u+)%]",
+      value = M.crossrefs_verses
     }
   },
 

@@ -196,4 +196,20 @@ function M.isempty(s)
   return s == nil or s == ''
 end
 
+function M.istableempty(t)
+  local check = true
+  for _, v in pairs(t) do
+    if type(v) == "table" then
+      check = M.istableempty(v)
+    else
+      check = not v
+    end
+  end
+  return check
+end
+
+function M.ternary(cond, T, F)
+  if cond then return T else return F end
+end
+
 return M

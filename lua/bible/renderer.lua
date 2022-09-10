@@ -4,7 +4,7 @@ local config = require("bible.config")
 local Text = require("bible.text")
 local folds = require("bible.folds")
 
-local renderer = {}
+local M = {}
 
 local signs = {}
 
@@ -33,7 +33,7 @@ end
 ---@param text Text
 ---@param items Item[]
 ---@param filename string
-function renderer.render_group(view, text, name, items)
+function M.render_group(view, text, name, items)
   view.items[text.lineNr + 1] = { name = name, is_grouped = true }
 
   if view.group.enabled == true then
@@ -58,12 +58,15 @@ function renderer.render_group(view, text, name, items)
   end
 
   if not folds.is_folded(name) then
-    renderer.render_attr(view, text, name, items, 0)
+    for _, item in pairs(items) do
+      M.render_attr(view, text, item.name, item.result, 0)
+      -- renderer.render_attr(view, text, name, items, 0)
+    end
   end
 end
 
 ---@param view BibleView
-function renderer.render(view, results, opts)
+function M.render(view, results, opts)
   opts = opts or {}
   local buf = vim.api.nvim_win_get_buf(view.parent)
   local grouped = providers:group_by(results, view.group)
@@ -99,7 +102,7 @@ function renderer.render(view, results, opts)
     if opts.close_folds then
       folds.close(group.name)
     end
-    renderer.render_group(view, text, group.name, group.items)
+    M.render_group(view, text, group.name, group.items)
   end
 
 
@@ -109,69 +112,98 @@ function renderer.render(view, results, opts)
   end
 end
 
-function renderer.render_attr(view, text, name, item, indent_count)
+function check_display(group_name, display_list)
+  for _, value in pairs(display_list) do
+    if string.find(group_name, value) then
+      return true
+    end
+  end
+  return false
+end
+
+local display_list = {
+  -- "verses"
+  -- "verses|value",
+  -- "verses",
+  -- "verses|id",
+  ""
+}
+
+function M.render_array(view, text, name, item, indent_count)
+  -- go through each item in the array and try to render its attributes
+  for _, val in ipairs(item) do
+    M.render_attr(view, text, name, val, indent_count + 1)
+  end
+end
+
+function M.render_table(view, text, name, item, indent_count)
+  -- if item["id"] then
+  --   local group_name = name .. "|" .. item["id"]
+  --   M.render_attr(view, text, group_name, item["key"], indent_count)
+  -- else
+
+  for key, val in pairs(item) do
+    local group_name = name .. "|" .. key
+
+    view.items[text.lineNr + 1] = { name = group_name, is_grouped = true }
+
+    if view.group.enabled == true then
+      if check_display(group_name, display_list) then
+        local count = util.count(item)
+        text:render(" ")
+        local indent = string.rep("     ", indent_count)
+        if config.options.indent_lines then
+          indent = string.rep(" │   ", indent_count)
+        end
+        text:render(indent)
+
+        if folds.is_folded(group_name) then
+          text:render(config.options.fold_closed, "FoldIcon", " ")
+        else
+          text:render(config.options.fold_open, "FoldIcon", " ")
+        end
+
+        if config.options.icons then
+          local icon, icon_hl = get_icon(group_name)
+          text:render(icon, icon_hl, { exact = true, append = " " })
+        end
+
+        text:render(group_name, " ")
+        -- text:render(" " .. count .. " ", "Count")
+        text:nl()
+      end
+    end
+
+    if not folds.is_folded(group_name) then
+      M.render_attr(view, text, group_name, val, indent_count)
+    end
+  end
+  -- end
+end
+
+function M.render_attr(view, text, name, item, indent_count)
   indent_count = indent_count or 0
   if type(item) == "table" then
-    if not util.is_array(item) then
-      local ignore_list = { name = true, version = true }
-
-      for key, val in pairs(item) do
-        local group_name = item.name .. "|" .. key
-        -- local group_name = key
-        if not ignore_list[key] then
-
-          view.items[text.lineNr + 1] = { name = group_name, is_grouped = true }
-
-          if view.group.enabled == true then
-            local count = util.count(item)
-
-            text:render(" ")
-            local indent = string.rep("     ", indent_count)
-            if config.options.indent_lines then
-              indent = string.rep(" │   ", indent_count)
-            end
-            text:render(indent)
-
-            if folds.is_folded(group_name) then
-              text:render(config.options.fold_closed, "FoldIcon", " ")
-            else
-              text:render(config.options.fold_open, "FoldIcon", " ")
-            end
-
-            if config.options.icons then
-              local icon, icon_hl = get_icon(group_name)
-              text:render(icon, icon_hl, { exact = true, append = " " })
-            end
-
-            text:render(group_name, " ")
-            -- text:render(" " .. count .. " ", "Count")
-            text:nl()
-          end
-
-          if not folds.is_folded(group_name) then
-            renderer.render_attr(view, text, key, val, indent_count)
-          end
-        end
-      end
-
+    if util.is_array(item) then
+      M.render_array(view, text, name, item, indent_count)
     else
-      for _, val in pairs(item) do
-        renderer.render_attr(view, text, name, val, indent_count + 1)
-      end
+      M.render_table(view, text, name, item, indent_count)
     end
-
   else
-    view.items[text.lineNr + 1] = item
-    text:render(" ")
-    local indent = string.rep("     ", indent_count)
-    if config.options.indent_lines then
-      indent = string.rep(" │   ", indent_count)
+
+    if check_display(name, display_list) then
+      view.items[text.lineNr + 1] = item
+      text:render(" ")
+      local indent = string.rep("     ", indent_count)
+      if config.options.indent_lines then
+        indent = string.rep(" │   ", indent_count)
+      end
+      -- text:nl()
+      text:render(indent, "Indent")
+      text:render(item, name)
+      text:render(" ")
+      text:nl()
     end
-    -- text:nl()
-    text:render(indent, "Indent")
-    text:render(item, name)
-    text:render(" ")
-    text:nl()
   end
 end
 
@@ -184,9 +216,7 @@ end
 --     -- end
 --     -- text:render(indent, "Indent")
 --     -- text:render(item.value)
---     renderer.render_attr(view, text, "Verse", item.value)
---     renderer.render_attr(view, text, "Commentary", item.commentary)
 --   end
 -- end
 
-return renderer
+return M

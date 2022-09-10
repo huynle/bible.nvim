@@ -30,7 +30,8 @@ end, { needs_selection = true })
 --
 
 -- function Bible.enable_mapping()
-vim.api.nvim_set_keymap("v", "<leader>bb", ":'<,'>BibleLookupSelection {x_footnotes=true, x_crossrefs=true}<CR>", keymap_opts)
+-- vim.api.nvim_set_keymap("v", "<leader>bb", ":'<,'>BibleLookupSelection {x_footnotes=true, x_crossrefs=true}<CR>", keymap_opts)
+vim.api.nvim_set_keymap("v", "<leader>bb", ":'<,'>BibleLookupSelection {}<CR>", keymap_opts)
 -- vim.api.nvim_set_keymap("n", "<leader>bb", "<cmd>BibleLookupWORD {x_footnotes=true, x_crossrefs=true}<CR>", keymap_opts)
 -- -- bible study mode - enable all
 -- -- vim.api.nvim_set_keymap("n", "<leader>bs", "<cmd>BibleLookupWORD { provider='bg2md' }<CR>", keymap_opts)
