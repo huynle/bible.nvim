@@ -135,17 +135,38 @@ function Bible.fetchVerse(verseRef, opts)
 	opts = opts or {
 		delimiter = "\n",
 	}
-	local text = {}
+	local verses = {}
 	local curl = Bible.curl(verseRef)
 	local _pup1 = Bible.pup('div[class="passage-text"]', curl)
 	local _pup2 = Bible.pup(":not(sup.footnote)", _pup1)
 	local _pup3 = Bible.pup("span.text json{}", _pup2, function(j, _, _)
 		local json = vim.fn.json_decode(j:result())
+		local cur_versenum
 		for _, item in ipairs(json) do
-			table.insert(text, item.text)
+			local verse = {}
+			verse.text = item.text
+			verse.footnotes = {}
+			if item.children then
+				for _, child in ipairs(item.children) do
+					if child.class == "versenum" then
+						cur_versenum = child.text
+					end
+					verse.num = cur_versenum
+
+					if child.class == "footnote" then
+						for _, footnote in ipairs(child.children) do
+							table.insert(verse.footnotes, {
+								tag = footnote.tag,
+								href = footnote.href,
+							})
+						end
+					end
+				end
+			end
+			table.insert(verses, verse)
 		end
-		local verse = table.concat(text, opts.delimiter or "\n")
-		dump(verse)
+		-- local final = table.concat(text, opts.delimiter or "\n")
+		dump(verses)
 	end)
 
 	_pup3:start()
