@@ -44,7 +44,7 @@ function Bible.setup(options)
 	providers.setup(config.options.providers)
 
 	require("bible.commands.builtin")
-	print("sourced bible")
+	-- print("sourced bible")
 end
 
 local views = {}
