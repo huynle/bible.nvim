@@ -4,21 +4,21 @@ local M = {}
 
 M.folded = {}
 
-function M.is_folded(filename)
-  local fold = M.folded[filename]
+function M.is_folded(name)
+  local fold = M.folded[name]
   return (fold == nil and config.options.auto_fold == true) or (fold == true)
 end
 
-function M.toggle(filename)
-  M.folded[filename] = not M.is_folded(filename)
+function M.toggle(name)
+  M.folded[name] = not M.is_folded(name)
 end
 
-function M.close(filename)
-  M.folded[filename] = true
+function M.close(name)
+  M.folded[name] = true
 end
 
-function M.open(filename)
-  M.folded[filename] = false
+function M.open(name)
+  M.folded[name] = false
 end
 
 return M
