@@ -68,6 +68,43 @@ local defaults = {
 		other = "﫠",
 	},
 	use_diagnostic_signs = false, -- enabling this will use the signs defined in your lsp client
+	yank_register = "+",
+
+	popup_window = {
+		position = 1,
+		padding = { 1, 1, 1, 1 },
+		size = {
+			width = "70%",
+			height = 10,
+		},
+		enter = true,
+		focusable = true,
+		zindex = 50,
+		relative = "cursor",
+		border = {
+			style = "rounded",
+		},
+		buf_options = {
+			modifiable = false,
+			readonly = true,
+		},
+		win_options = {
+			wrap = true,
+			linebreak = true,
+			-- winblend = 10,
+			-- winhighlight = "Normal:Normal,FloatBorder:FloatBorder",
+			winhighlight = "Normal:Normal,FloatBorder:FloatBorder",
+		},
+
+		keymaps = {
+			close = { "<C-c>", "q" },
+			accept = "<CR>",
+			append = "a",
+			prepend = "p",
+			yank_code = "c",
+			yank_to_register = "y",
+		},
+	},
 }
 
 M.options = {}
