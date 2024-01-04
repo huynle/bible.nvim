@@ -4,36 +4,12 @@ local providers = require("bible.providers")
 local View = require("bible.view")
 local util = require("bible.util")
 local tools = require("bible.util.tools")
+local Popup = require("nui.popup")
 -- local http = require("plenary.http")
 local Job = require("plenary.job")
+-- local popup = require("plenary.popup")
 
 local Bible = {}
-
-local function get_opts(...)
-	local args = { ... }
-	if vim.tbl_islist(args) and #args == 1 and type(args[1]) == "table" then
-		args = args[1]
-	end
-	local opts = {}
-	for key, value in pairs(args) do
-		if type(key) == "number" then
-			local k, v = value:match("^(.*)=(.*)$")
-			if k then
-				opts[k] = v
-			elseif opts.mode then
-			-- util.error("unknown option " .. value)
-			else
-				opts.mode = value
-			end
-		else
-			opts[key] = value
-		end
-	end
-	opts = opts or {}
-	-- util.fix_mode(opts)
-	config.options = opts
-	return opts
-end
 
 function Bible.setup(options)
 	-- local options = get_opts(...)
@@ -44,7 +20,7 @@ function Bible.setup(options)
 	providers.setup(config.options.providers)
 
 	require("bible.commands.builtin")
-	print("sourced bible")
+	-- print("sourced bible")
 end
 
 local views = {}
@@ -80,158 +56,6 @@ function Bible.yank()
 	-- end
 end
 
--- Function to handle stdout data
-
--- Spawn the curl command
-function Bible.exec(cmd, args)
-	local stdout = vim.loop.new_pipe(false)
-	local stderr = vim.loop.new_pipe(false)
-
-	local handle
-	handle = vim.loop.spawn(
-		cmd,
-		{
-			args = args,
-			stdio = { nil, stdout, stderr }, -- Redirect stdout to a pipe
-		},
-		vim.schedule_wrap(function()
-			stdout:read_stop()
-			stderr:read_stop()
-			stdout:close()
-			stderr:close()
-			if handle ~= nil then
-				handle:close()
-			end
-		end)
-	)
-
-	local results = {}
-
-	local function onread(err, data)
-		results = data
-		if err then
-			-- Handle error
-			print("Error reading stdout:", err)
-			return
-		end
-
-		if data then
-			-- results = data
-			-- Process the received data (stdout)
-			print("Received data:", data)
-		else
-			-- Finished reading stdout
-			print("Finished reading data")
-		end
-	end
-
-	vim.loop.read_start(stdout, onread)
-	vim.loop.read_start(stderr, onread)
-
-	return results
-end
-
-function Bible.fetchVerse(verseRef, opts)
-	opts = opts or {
-		delimiter = "\n",
-	}
-	local verses = {}
-	local curl = Bible.curl(verseRef)
-	local _pup1 = Bible.pup('div[class="passage-text"]', curl)
-	local _pup2 = Bible.pup(":not(sup.footnote)", _pup1)
-	local _pup3 = Bible.pup("span.text json{}", _pup2, function(j, _, _)
-		local json = vim.fn.json_decode(j:result())
-		local cur_versenum
-		for _, item in ipairs(json) do
-			local verse = {}
-			verse.text = item.text
-			verse.footnotes = {}
-			if item.children then
-				for _, child in ipairs(item.children) do
-					if child.class == "versenum" then
-						cur_versenum = child.text
-					end
-					verse.num = cur_versenum
-
-					if child.class == "footnote" then
-						for _, footnote in ipairs(child.children) do
-							table.insert(verse.footnotes, {
-								tag = footnote.tag,
-								href = footnote.href,
-							})
-						end
-					end
-				end
-			end
-			table.insert(verses, verse)
-		end
-		-- local final = table.concat(text, opts.delimiter or "\n")
-		dump(verses)
-	end)
-
-	_pup3:start()
-end
-
-function Bible.curl(verseRef)
-	local uri = Bible.formURL(verseRef)
-
-	return Job:new({
-		command = "curl",
-		args = {
-			"--silent",
-			"--show-error",
-			"--no-buffer",
-			uri,
-		},
-		writer = nil,
-		cwd = "/usr/bin",
-	})
-end
-
-function Bible.pup(query, prev_job, on_exit)
-	local _job = Job:new({
-		command = "pup",
-		args = { query },
-		writer = prev_job,
-		cwd = "/home/huy/go/bin",
-		on_exit = on_exit and vim.schedule_wrap(on_exit) or nil,
-	})
-	return _job
-end
-
-function Bible.extractText(html)
-	local cb = function(...)
-		print(...)
-	end
-
-	Bible.exec("pup", {
-		'div[class="passage-text"]',
-	}, function(chunk) end, function(err, _)
-		cb(err)
-	end, function() end, function(chunk)
-		cb(chunk, "passage-text")
-	end)
-
-	return nil
-end
-
-local START_READ_CONTENT_RE = "<h1 class=['\"]passage-display['\"]>"
-local END_READ_CONTENT_RE = "^<script "
-local DEFAULT_VERSION = "NABRE" -- Default Bible version
-
-local opts = {
-	boldwords = false,
-	copyright = true,
-	headers = true,
-	footnotes = true,
-	verbose = false,
-	newline = false,
-	numbering = true,
-	crossrefs = true,
-	filename = "", -- File name for test HTML (if needed)
-	version = DEFAULT_VERSION, -- Default Bible version
-}
-
 local function urlencode(params)
 	local encoded_params = {}
 	for key, value in pairs(params) do
@@ -242,7 +66,10 @@ local function urlencode(params)
 	return table.concat(encoded_params, "&")
 end
 
-function Bible.formURL(ref)
+function Bible.formURL(ref, opts)
+	opts = opts or {
+		version = "NABRE",
+	}
 	local uri = "https://www.biblegateway.com/passage/"
 	local params = {
 		interface = "print",
@@ -253,35 +80,266 @@ function Bible.formURL(ref)
 	return uri
 end
 
-function Bible.extractInterestingContent(lines)
-	local input_lines = {}
-	local n = 0
-	local in_interesting = false
+local function compareVerseKeys(a, b)
+	local aBook, aChapter, aVerse = a:match("^(.-)%-(%d+)%-(%d+)$")
+	local bBook, bChapter, bVerse = b:match("^(.-)%-(%d+)%-(%d+)$")
+	aChapter = tonumber(aChapter)
+	bChapter = tonumber(bChapter)
+	aVerse = tonumber(aVerse)
+	bVerse = tonumber(bVerse)
 
-	for _, line in ipairs(lines) do
-		if string.match(line, START_READ_CONTENT_RE) then
-			in_interesting = true
-		end
+	if aBook ~= bBook then
+		return aBook < bBook
+	elseif aChapter ~= bChapter then
+		return aChapter < bChapter
+	else
+		return aVerse < bVerse
+	end
+end
 
-		if in_interesting then
-			if string.match(line, END_READ_CONTENT_RE) then
-				break
-			end
+local function sort_verse(myTable)
+	local sortedKeys = {}
+	for key, _ in pairs(myTable) do
+		table.insert(sortedKeys, key)
+	end
 
-			local updated_line = line:match("^%s*(.-)%s*$")
-			if updated_line ~= "" then
-				input_lines[n + 1] = updated_line
-				n = n + 1
-			end
+	table.sort(sortedKeys, compareVerseKeys) -- Sorts the keys alphabetically
+	return sortedKeys
+end
+
+function Bible.fetchVerse(verseRef, opts)
+	local response = Bible.curl(verseRef)
+
+	local job1 = Bible.get_text_new(response, {
+		on_exit = function(j, _, _)
+			vim.schedule(function()
+				local json = vim.fn.json_decode(j:result()) or {}
+				local book = Bible.extract_span_text(json)
+				local _content = {}
+
+				for _, key in ipairs(sort_verse(book)) do
+					for _, item in ipairs(book[key]) do
+						table.insert(_content, item.text)
+					end
+				end
+				Bible.open_popup(_content)
+			end)
+		end,
+	})
+
+	job1:start()
+	job1:wait()
+end
+
+function Bible.get_text_new(input, opts)
+	local _pup1 = Bible.pup('div[class="passage-text"]', input)
+	local _pup2 = Bible.pup(":not(sup.footnote)", _pup1)
+	local _pup3 = Bible.pup("span.text json{}", _pup2, opts)
+	return _pup3
+end
+
+function Bible.get_text(curl)
+	local book
+	local _pup1 = Bible.pup('div[class="passage-text"]', curl)
+	local _pup2 = Bible.pup(":not(sup.footnote)", _pup1)
+	local _pup3 = Bible.pup("span.text json{}", _pup2)
+	_pup3:sync()
+
+	local json = vim.fn.json_decode(_pup3:result()) or {}
+	book = Bible.extract_span_text(json)
+	return book
+end
+
+function Bible.curl(verseRef, on_exit)
+	local uri = Bible.formURL(verseRef)
+	local stdout_results = {}
+
+	Job:new({
+		command = "curl",
+		args = {
+			"--silent",
+			"--show-error",
+			"--no-buffer",
+			uri,
+		},
+		writer = nil,
+		on_exit = on_exit,
+		on_stdout = function(_, line)
+			table.insert(stdout_results, line)
+		end,
+	}):sync()
+
+	return stdout_results
+end
+
+function Bible.pup(query, prev_job, opts)
+	opts = vim.tbl_extend("force", {
+		command = "pup",
+		args = { query },
+		writer = prev_job,
+	}, opts or {})
+	return Job:new(opts)
+end
+
+function Bible.encode(prev_job)
+	local _job = Job:new({
+		command = "python",
+		args = {
+			"-c",
+			[["import sys; print(sys.stdin.read().encode('utf-8'))"]],
+		},
+		writer = prev_job,
+		-- cwd = "/home/huy/go/bin",
+		-- on_exit = on_exit and vim.schedule_wrap(on_exit) or nil,
+	})
+	return _job
+end
+
+local function process_element(element, parent)
+	local output = {}
+	parent = parent or {}
+	-- if element.tag == "br" then
+	-- 	table.insert(output, "<br>")
+
+	local has_text, _ = string.find(element.class or "", "text")
+	local has_versenum, _ = string.find(element.class or "", "versenum")
+	local has_footnote, _ = string.find(element.class or "", "footnote")
+	if has_text ~= nil then
+		output.name = "text"
+	end
+
+	if has_versenum ~= nil then
+		output.name = "versenum"
+	end
+	if has_footnote ~= nil then
+		output.name = "footnote"
+	end
+
+	if element.text and element.href then
+		-- table.insert(output, element.text)
+		output.name = element.text
+		output.value = element.href
+	end
+
+	if element.text then
+		-- table.insert(output, element.text)
+		output.value = element.text
+	end
+
+	if element.href then
+		-- table.insert(output, element.text)
+		output.value = element.href
+	end
+
+	if element.children then
+		-- local _parent = process_element(element) -- process parent
+		-- vim.tbl_extend("force", _parent, output)
+		-- _parent.value = {}
+		-- output.children = {}
+		for _, child in ipairs(element.children) do
+			local _output = process_element(child, parent)
+			parent.value = _output
+			-- table.insert(output.children, ith, process_element(child))
+			-- vim.tbl_extend("force", output, _output)
 		end
 	end
 
-	return input_lines
+	return output
 end
 
-function Bible.realistic_func()
-	local buf = vim.api.nvim_create_buf(false, true)
-	vim.api.nvim_command("sbuffer " .. buf)
+local function process_json(json_data)
+	local output = {}
+	for _, top_level_element in ipairs(json_data) do
+		vim.tbl_extend("force", output, process_element(top_level_element))
+	end
+	return table.concat(output)
+end
+
+function Bible.output_table(lua_table)
+	local processed_output = process_json(lua_table)
+	return processed_output
+
+	-- Bible.open_popup(processed_output)
+end
+
+-- 01/02/2024
+function Bible.extract_span_text(json, opts)
+	opts = opts or {
+		delimiter = "\n",
+	}
+	local book = {}
+
+	for _, item in ipairs(json) do
+		local cur_versenum = item.class
+		local verse = {}
+		verse.text = item.text
+		verse.footnotes = {}
+		if item.children then
+			for _, child in ipairs(item.children) do
+				if child.class == "versenum" then
+					verse.versenum = child.text
+				end
+				if child.class == "footnote" then
+					for _, _item in ipairs(child.children) do
+						verse.footnotes[_item.text] = _item.href
+					end
+				end
+			end
+		end
+
+		-- verse.verse = cur_versenum
+		if not book[cur_versenum] then
+			book[cur_versenum] = {}
+		end
+		table.insert(book[cur_versenum], verse)
+	end
+	return book
+end
+
+function Bible.open_popup(content)
+	local popup_options = {
+		position = "50%",
+		size = {
+			width = 80,
+			height = 40,
+		},
+		enter = true,
+		focusable = true,
+		zindex = 50,
+		relative = "editor",
+		border = {
+			padding = {
+				top = 2,
+				bottom = 2,
+				left = 3,
+				right = 3,
+			},
+			style = "rounded",
+			-- text = {
+			-- 	top = " I am top title ",
+			-- 	top_align = "center",
+			-- 	bottom = "I am bottom title",
+			-- 	bottom_align = "left",
+			-- },
+		},
+		buf_options = {
+			modifiable = true,
+			readonly = true,
+		},
+		win_options = {
+			winblend = 10,
+			winhighlight = "Normal:Normal,FloatBorder:FloatBorder",
+		},
+	}
+
+	local panel = Popup(popup_options)
+
+	-- local bufnr = vim.api.nvim_win_get_buf(win_id)
+	panel:map("n", "q", "<cmd>lua vim.api.nvim_win_close(0, true)<CR>", { silent = true })
+	panel:map("n", "<c-c>", "<cmd>lua vim.api.nvim_win_close(0, true)<CR>", { silent = true })
+
+	vim.api.nvim_buf_set_lines(panel.bufnr, -2, -1, false, content)
+	panel:mount()
 end
 
 function Bible.action(action)
