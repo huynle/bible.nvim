@@ -201,18 +201,6 @@ function M.isempty(s)
 	return s == nil or s == ""
 end
 
-function M.istableempty(t)
-	local check = true
-	for _, v in pairs(t) do
-		if type(v) == "table" then
-			check = M.istableempty(v)
-		else
-			check = not v
-		end
-	end
-	return check
-end
-
 function M.ternary(cond, T, F)
 	if cond then
 		return T
@@ -248,6 +236,38 @@ function M.get_visual_lines(bufnr)
 	lines[1] = lines[1]:sub(start_col)
 
 	return lines, start_row, start_col, end_row, end_col
+end
+
+function M.compareVerseKeys(a, b)
+	local aBook, aChapter, aVerse = a:match("^(.-)%-(%d+)%-(%d+)$")
+	local bBook, bChapter, bVerse = b:match("^(.-)%-(%d+)%-(%d+)$")
+	aChapter = tonumber(aChapter)
+	bChapter = tonumber(bChapter)
+	aVerse = tonumber(aVerse)
+	bVerse = tonumber(bVerse)
+
+	if aBook ~= bBook then
+		return aBook < bBook
+	elseif aChapter ~= bChapter then
+		return aChapter < bChapter
+	else
+		return aVerse < bVerse
+	end
+end
+
+function M.sort_verse(myTable)
+	local sortedKeys = {}
+	for key, _ in pairs(myTable) do
+		table.insert(sortedKeys, key)
+	end
+
+	table.sort(sortedKeys, M.compareVerseKeys) -- Sorts the keys alphabetically
+	return sortedKeys
+end
+
+function M.isempty(s)
+	-- when a visual selection is empty, it produces \r\27
+	return s == nil or s == "" or s == "\r\27"
 end
 
 return M

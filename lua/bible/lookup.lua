@@ -1,12 +1,15 @@
 local Popup = require("bible.popup")
 local Job = require("plenary.job")
 local classes = require("bible.common.classes")
+local config = require("bible.config")
 local utils = require("bible.utils")
 
 local Lookup = classes.class()
 
 function Lookup:init(opts)
-	self.opts = opts or {}
+	self.opts = vim.tbl_extend("force", config.options.lookup_defaults, opts or {})
+	self.book = {}
+	self.cur_win = vim.api.nvim_get_current_win()
 end
 
 function Lookup:get_bufnr()
@@ -52,133 +55,63 @@ local function urlencode(params)
 	return table.concat(encoded_params, "&")
 end
 
--- local function urlencode(params)
--- 	local encoded_params = {}
--- 	for key, value in pairs(params) do
--- 		if type(value) == "table" then
--- 		end
--- 		key = string.gsub(key, " ", "%%20") -- Encode spaces as %20
--- 		value = string.gsub(value, " ", "%%20") -- Encode spaces as %20
--- 		table.insert(encoded_params, key .. "=" .. value)
--- 	end
--- 	return table.concat(encoded_params, "&")
--- end
-
 function Lookup:form_URL(opts)
-	opts = opts or {}
-	local defaults = {
-		version = "NABRE",
-		query = "Genesis 1:1",
-	}
-	opts = vim.tbl_extend("keep", opts, defaults)
+	opts = vim.tbl_extend("force", self.opts, opts or {})
 
 	local uri = "https://www.biblegateway.com/passage/"
-	local uris = {}
-
-	if type(opts.query) == "string" then
-		local params = {
-			interface = "print",
-			version = opts.version,
-			search = _urlencode(opts.query),
-		}
-		table.insert(uris, uri .. "?" .. urlencode(params))
-	else
-		for _, item in ipairs(opts.query) do
-			local params = {
-				interface = "print",
-				version = opts.version,
-				search = _urlencode(item),
-			}
-			table.insert(uris, uri .. "?" .. urlencode(params))
-		end
-	end
-
-	return uris
-end
-
-local function compareVerseKeys(a, b)
-	local aBook, aChapter, aVerse = a:match("^(.-)%-(%d+)%-(%d+)$")
-	local bBook, bChapter, bVerse = b:match("^(.-)%-(%d+)%-(%d+)$")
-	aChapter = tonumber(aChapter)
-	bChapter = tonumber(bChapter)
-	aVerse = tonumber(aVerse)
-	bVerse = tonumber(bVerse)
-
-	if aBook ~= bBook then
-		return aBook < bBook
-	elseif aChapter ~= bChapter then
-		return aChapter < bChapter
-	else
-		return aVerse < bVerse
-	end
-end
-
-local function sort_verse(myTable)
-	local sortedKeys = {}
-	for key, _ in pairs(myTable) do
-		table.insert(sortedKeys, key)
-	end
-
-	table.sort(sortedKeys, compareVerseKeys) -- Sorts the keys alphabetically
-	return sortedKeys
-end
-
-function Lookup:fetchVerseFromSelection(opts)
-	opts = opts or {}
-	opts.query = self:get_visual_selection()
-	return self:fetchVerse(opts)
+	local params = {
+		interface = "print",
+		version = opts.version,
+		search = _urlencode(opts.query),
+	}
+	return uri .. "?" .. urlencode(params)
 end
 
 function Lookup:fetchVerse(opts)
 	-- fetch the bible verse and extract only text
-	opts = opts or {}
-	local book = {}
+	opts = vim.tbl_extend("force", self.opts, opts or {})
 
-	local responses = Lookup:curl(opts)
+	local response = self:curl(opts)
 
-	for ith, response in ipairs(responses) do
-		local job1 = Lookup.get_verse(response, {
-			on_exit = function(j, _, _)
-				vim.schedule(function()
-					local json = vim.fn.json_decode(j:result()) or {}
-					local _extracted = Lookup:extract_span_text(json)
-					book = vim.tbl_extend("force", book, _extracted)
-
-					Lookup:add_footnote(response, book)
-				end)
-			end,
-		})
-
-		-- local job2 = Bible.get_footnote(response, id, {
-		-- 	on_exit = function(j, _, _)
-		-- 		vim.schedule(function()
-		-- 			local _result = j:result()
-		-- 			local json = vim.fn.json_decode(_result) or {}
-		-- 			book = vim.tbl_extend("force", book, {})
-		-- 		end)
-		-- 	end,
-		-- })
-
-		job1:after(function(j, code, signal)
+	local job1 = self:get_verse(response, {
+		on_exit = function(j, _, _)
 			vim.schedule(function()
-				Lookup:show_popup(opts.query[ith], book)
+				local json = vim.fn.json_decode(j:result()) or {}
+				self:extract_span_text(json)
+				self:add_footnote(response)
 			end)
-		end)
+		end,
+	})
 
-		-- Job.chain(job1, job2)
-		Job.chain(job1)
-	end
+	-- local job2 = Bible.get_footnote(response, id, {
+	-- 	on_exit = function(j, _, _)
+	-- 		vim.schedule(function()
+	-- 			local _result = j:result()
+	-- 			local json = vim.fn.json_decode(_result) or {}
+	-- 			book = vim.tbl_extend("force", book, {})
+	-- 		end)
+	-- 	end,
+	-- })
+
+	job1:after(function(j, code, signal)
+		vim.schedule(function()
+			self:show_popup(opts.query)
+		end)
+	end)
+
+	-- Job.chain(job1, job2)
+	Job.chain(job1)
 end
 
-function Lookup:add_footnote(html, book)
-	for key, verse in pairs(book) do
+function Lookup:add_footnote(html)
+	for key, verse in pairs(self.book) do
 		for ith, partial_verse in ipairs(verse) do
 			for tag, id in pairs(partial_verse.footnotes) do
-				Lookup.get_footnote(html, id, {
+				self:get_footnote(html, id, {
 					on_exit = function(j, _, _)
 						vim.schedule(function()
 							local _result = table.concat(j:result(), "")
-							book[key][ith].footnotes[tag] = _result
+							self.book[key][ith].footnotes[tag] = _result
 						end)
 					end,
 				}):start()
@@ -187,55 +120,59 @@ function Lookup:add_footnote(html, book)
 	end
 end
 
-function Lookup:show_popup(query, book)
-	local _content = { query }
-	for _, key in ipairs(sort_verse(book)) do
-		for ith, partial_verse in ipairs(book[key]) do
-			table.insert(_content, partial_verse.text)
-		end
-	end
-	local popup = Popup()
-	vim.api.nvim_buf_set_lines(popup.bufnr, -2, -1, false, _content)
+function Lookup:show_popup(query)
+	local _, start_row, start_col, end_row, end_col = self:get_visual_selection()
+
+	local popup = Popup(self, {
+		main_bufnr = self:get_bufnr(),
+		title = query,
+		cur_win = self.cur_win,
+		selection_idx = {
+			start_row = start_row,
+			start_col = start_col,
+			end_row = end_row,
+			end_col = end_col,
+		},
+	})
+
 	popup:mount()
 end
 
-function Lookup.get_footnote(input, id, opts)
+function Lookup:get_footnote(input, id, opts)
 	-- find
-	local _pup1 = Lookup:pup("div.footnotes li" .. id, input)
-	local _pup2 = Lookup:pup("text{}", _pup1, opts)
+	local _pup1 = self:pup("div.footnotes li" .. id, input)
+	local _pup2 = self:pup("text{}", _pup1, opts)
 	return _pup2
 end
 
-function Lookup.get_verse(input, opts)
-	local _pup1 = Lookup:pup('div[class="passage-text"]', input)
-	local _pup2 = Lookup:pup(":not(sup.footnote)", _pup1)
-	local _pup3 = Lookup:pup("span.text json{}", _pup2, opts)
+function Lookup:get_verse(input, opts)
+	local _pup1 = self:pup('div[class="passage-text"]', input)
+	local _pup2 = self:pup(":not(sup.footnote)", _pup1)
+	local _pup3 = self:pup("span.text json{}", _pup2, opts)
 	return _pup3
 end
 
 function Lookup:curl(opts, on_exit)
-	local uris = Lookup:form_URL(opts)
-	local responses = {}
-	for _, uri in ipairs(uris) do
-		local stdout_results = {}
+	opts = vim.tbl_extend("force", self.opts, opts or {})
 
-		local job = Job:new({
-			command = "curl",
-			args = {
-				"--silent",
-				"--show-error",
-				"--no-buffer",
-				uri,
-			},
-			on_exit = on_exit,
-			on_stdout = function(_, line)
-				table.insert(stdout_results, line)
-			end,
-		})
-		job:sync()
-		table.insert(responses, stdout_results)
-	end
-	return responses
+	local uri = self:form_URL(opts)
+	local stdout_results = {}
+
+	local job = Job:new({
+		command = "curl",
+		args = {
+			"--silent",
+			"--show-error",
+			"--no-buffer",
+			uri,
+		},
+		on_exit = on_exit,
+		on_stdout = function(_, line)
+			table.insert(stdout_results, line)
+		end,
+	})
+	job:sync()
+	return stdout_results
 end
 
 function Lookup:pup(query, prev_job, opts)
@@ -326,7 +263,7 @@ function Lookup:extract_span_text(json, opts)
 	opts = opts or {
 		delimiter = "\n",
 	}
-	local book = {}
+	local _book = {}
 
 	for _, item in ipairs(json) do
 		local cur_versenum = item.class
@@ -347,12 +284,12 @@ function Lookup:extract_span_text(json, opts)
 		end
 
 		-- verse.verse = cur_versenum
-		if not book[cur_versenum] then
-			book[cur_versenum] = {}
+		if not _book[cur_versenum] then
+			_book[cur_versenum] = {}
 		end
-		table.insert(book[cur_versenum], verse)
+		table.insert(_book[cur_versenum], verse)
 	end
-	return book
+	self.book = vim.tbl_extend("force", self.book, _book)
 end
 
 return Lookup
