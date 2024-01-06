@@ -1,192 +1,100 @@
-local util = require("bible.util")
-local providers = require("bible.providers")
 local config = require("bible.config")
-local Text = require("bible.text")
-local folds = require("bible.folds")
+local NuiTree = require("nui.tree")
+local NuiLine = require("nui.line")
+local utils = require("bible.utils")
+local classes = require("bible.common.classes")
 
-local renderer = {}
+local Renderer = classes.class()
 
-local signs = {}
+function Renderer:init(lookup, view, options)
+	self.opts = options
+	self.lookup = lookup
+	self.view = view
 
-local function get_icon(file)
-  local ok, icons = pcall(require, "nvim-web-devicons")
-  if not ok then
-    util.warn(
-      "'nvim-web-devicons' is not installed. Install it, or set icons=false in your configuration to disable this message"
-    )
-    return ""
-  end
-  local fname = vim.fn.fnamemodify(file, ":t")
-  local ext = vim.fn.fnamemodify(file, ":e")
-  return icons.get_icon(fname, ext, { default = true })
+	self.tree = NuiTree({
+		bufnr = self.view.bufnr,
+		nodes = {},
+		prepare_node = function(node)
+			local line = NuiLine()
+			line:append(string.rep("  ", node:get_depth() - 1))
+			if node:has_children() then
+				line:append(node:is_expanded() and " " or " ")
+			else
+				line:append("  ")
+			end
+			if node.is_footnote then
+				line:append(self.lookup.ref[node.id] or node.id .. " not ready")
+			else
+				line:append((node.versenum or "") .. "\t" .. (node.text or ""))
+			end
+			return line
+		end,
+	})
 end
 
-local function update_signs()
-  signs = config.options.signs
-  if config.options.use_diagnostic_signs then
-    local lsp_signs = require("trouble.providers.diagnostic").get_signs()
-    signs = vim.tbl_deep_extend("force", {}, signs, lsp_signs)
-  end
+function Renderer:render_text()
+	local _content = {}
+	for _, key in ipairs(utils.sort_verse(self.lookup.book)) do
+		for ith, partial_verse in ipairs(self.lookup.book[key]) do
+			table.insert(_content, partial_verse.text)
+		end
+	end
+
+	vim.api.nvim_buf_set_lines(self.view.bufnr, -2, -1, false, _content)
 end
 
----@param view BibleView
----@param text Text
----@param items Item[]
----@param filename string
-function renderer.render_group(view, text, name, items)
-  view.items[text.lineNr + 1] = { name = name, is_grouped = true }
+function Renderer:prepare_tree()
+	-- vim.api.nvim_buf_set_lines(self.bufnr, -2, -1, false, content)
+	local node = {}
+	for _, key in ipairs(utils.sort_verse(self.lookup.book)) do
+		for ith, partial_verse in ipairs(self.lookup.book[key]) do
+			-- prepend verse number
+			local _line = {
+				text = partial_verse.text,
+				versenum = partial_verse.versenum,
+				is_verse = true,
+			}
+			local _footnotes = {}
+			for tag, id in pairs(partial_verse.footnotes) do
+				table.insert(
+					_footnotes,
+					NuiTree.Node({
+						id = id,
+						is_footnote = true,
+					})
+				)
+			end
 
-  if view.group.enabled == true then
-    local count = util.count(items)
+			local _node
+			if not vim.tbl_isempty(_footnotes) then
+				_node = NuiTree.Node(_line, _footnotes)
+			else
+				_node = NuiTree.Node(_line)
+			end
 
-    text:render(" ")
+			-- table.insert(node, _node)
+			self.tree:add_node(_node)
+		end
+	end
 
-    if folds.is_folded(name) then
-      text:render(config.options.fold_closed, "FoldIcon", " ")
-    else
-      text:render(config.options.fold_open, "FoldIcon", " ")
-    end
+	-- toggle node
+	self.view:map("n", config.options.view.keymaps.toggle, function()
+		local linenr = vim.api.nvim_win_get_cursor(self.view.winid)[1]
+		local _node = self.tree:get_node(linenr)
+		if _node:is_expanded() then
+			_node:collapse()
+		else
+			_node:expand()
+		end
 
-    if config.options.icons then
-      local icon, icon_hl = get_icon(name)
-      text:render(icon, icon_hl, { exact = true, append = " " })
-    end
-
-    text:render(name, " ")
-    -- text:render(" " .. count .. " ", "Count")
-    text:nl()
-  end
-
-  if not folds.is_folded(name) then
-    renderer.render_attr(view, text, name, items, 0)
-  end
+		self.tree:render()
+	end)
 end
 
----@param view BibleView
-function renderer.render(view, results, opts)
-  opts = opts or {}
-  local buf = vim.api.nvim_win_get_buf(view.parent)
-  local grouped = providers:group_by(results, view.group)
-  local count = util.count(grouped)
-
-  -- check for auto close
-  if opts.auto and config.options.auto_close then
-    if util.count(results) == 0 then
-      if count == 0 then
-        view:close()
-        return
-      end
-    end
-  end
-
-  if util.count(results) == 0 then
-    util.warn("no results")
-  end
-
-  -- dump(texts)
-  local text = Text:new()
-  view.items = {}
-
-  if config.options.padding then
-    text:nl()
-  end
-
-  -- render groups
-  for _, group in ipairs(grouped) do
-    if opts.open_folds then
-      folds.open(group.name)
-    end
-    if opts.close_folds then
-      folds.close(group.name)
-    end
-    renderer.render_group(view, text, group.name, group.items)
-  end
-
-
-  view:render(text)
-  if opts.focus then
-    view:focus()
-  end
+function Renderer:render()
+	-- vim.api.nvim_buf_set_option(self.bufnr, "modifiable", true)
+	-- vim.api.nvim_buf_set_lines(self.bufnr, 0, -1, false, {})
+	self.tree:render()
 end
 
-function renderer.render_attr(view, text, name, item, indent_count)
-  indent_count = indent_count or 0
-  if type(item) == "table" then
-    if not util.is_array(item) then
-      local ignore_list = { name = true, version = true }
-
-      for key, val in pairs(item) do
-        local group_name = item.name .. "|" .. key
-        -- local group_name = key
-        if not ignore_list[key] then
-
-          view.items[text.lineNr + 1] = { name = group_name, is_grouped = true }
-
-          if view.group.enabled == true then
-            local count = util.count(item)
-
-            text:render(" ")
-            local indent = string.rep("     ", indent_count)
-            if config.options.indent_lines then
-              indent = string.rep(" │   ", indent_count)
-            end
-            text:render(indent)
-
-            if folds.is_folded(group_name) then
-              text:render(config.options.fold_closed, "FoldIcon", " ")
-            else
-              text:render(config.options.fold_open, "FoldIcon", " ")
-            end
-
-            if config.options.icons then
-              local icon, icon_hl = get_icon(group_name)
-              text:render(icon, icon_hl, { exact = true, append = " " })
-            end
-
-            text:render(group_name, " ")
-            -- text:render(" " .. count .. " ", "Count")
-            text:nl()
-          end
-
-          if not folds.is_folded(group_name) then
-            renderer.render_attr(view, text, key, val, indent_count)
-          end
-        end
-      end
-
-    else
-      for _, val in pairs(item) do
-        renderer.render_attr(view, text, name, val, indent_count + 1)
-      end
-    end
-
-  else
-    view.items[text.lineNr + 1] = item
-    text:render(" ")
-    local indent = string.rep("     ", indent_count)
-    if config.options.indent_lines then
-      indent = string.rep(" │   ", indent_count)
-    end
-    -- text:nl()
-    text:render(indent, "Indent")
-    text:render(item, name)
-    text:render(" ")
-    text:nl()
-  end
-end
-
--- function renderer.render_verse(view, text, items)
---   for _, item in ipairs(items) do
---     -- view.items[text.lineNr + 1] = item
---     -- local indent = "     "
---     -- if config.options.indent_lines then
---     --   indent = " │   "
---     -- end
---     -- text:render(indent, "Indent")
---     -- text:render(item.value)
---     renderer.render_attr(view, text, "Verse", item.value)
---     renderer.render_attr(view, text, "Commentary", item.commentary)
---   end
--- end
-
-return renderer
+return Renderer
