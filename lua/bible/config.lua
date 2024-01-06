@@ -8,27 +8,14 @@ local defaults = {
 		query = "Genesis 1:1",
 	},
 	yank_register = "+",
-	popup_window = {
-		position = 1,
-		padding = { 1, 1, 1, 1 },
-		size = {
-			width = "50%",
-			-- height = 10,
-			height = "50%",
-		},
+	view = {
 		enter = false,
-		focusable = true,
-		zindex = 50,
-		relative = "cursor",
-		border = {
-			style = "rounded",
-		},
 		buf_options = {
 			modifiable = false,
 			-- readonly = true,
 		},
 		win_options = {
-			wrap = true,
+			wrap = false,
 			linebreak = true,
 			-- winblend = 10,
 			-- winhighlight = "Normal:Normal,FloatBorder:FloatBorder",
@@ -43,6 +30,27 @@ local defaults = {
 			prepend = "p",
 			yank_code = "c",
 			yank_to_register = "y",
+		},
+	},
+	split_window = {
+		relative = "win",
+		position = "right",
+		size = "35%",
+		focusable = true,
+	},
+	popup_window = {
+		position = 1,
+		padding = { 1, 1, 1, 1 },
+		size = {
+			width = "50%",
+			-- height = 10,
+			height = "50%",
+		},
+		focusable = true,
+		zindex = 50,
+		relative = "cursor",
+		border = {
+			style = "rounded",
 		},
 	},
 }

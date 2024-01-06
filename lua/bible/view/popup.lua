@@ -1,37 +1,14 @@
 local Popup = require("nui.popup")
 local config = require("bible.config")
 local event = require("nui.utils.autocmd").event
-local NuiTree = require("nui.tree")
-local NuiLine = require("nui.line")
-local utils = require("bible.utils")
 
 local PopupWindow = Popup:extend("PopupWindow")
 
-function PopupWindow:init(lookup, options)
+function PopupWindow:init(options)
 	options = vim.tbl_deep_extend("keep", options or {}, config.options.popup_window)
+	options = vim.tbl_deep_extend("keep", options or {}, config.options.view)
 	self.opts = options
-	self.lookup = lookup
 	PopupWindow.super.init(self, options)
-
-	self.tree = NuiTree({
-		bufnr = self.bufnr,
-		nodes = {},
-		prepare_node = function(node)
-			local line = NuiLine()
-			line:append(string.rep("  ", node:get_depth() - 1))
-			if node:has_children() then
-				line:append(node:is_expanded() and " " or " ")
-			else
-				line:append("  ")
-			end
-			if node.is_footnote then
-				line:append(self.lookup.ref[node.id] or node.id .. " not ready")
-			else
-				line:append(node.text)
-			end
-			return line
-		end,
-	})
 end
 
 function PopupWindow:update_popup_size(opts)
@@ -93,79 +70,14 @@ function PopupWindow:calculate_size(opts)
 	}
 end
 
-function PopupWindow:render_text()
-	local _content = {}
-	for _, key in ipairs(utils.sort_verse(self.lookup.book)) do
-		for ith, partial_verse in ipairs(self.lookup.book[key]) do
-			table.insert(_content, partial_verse.text)
-		end
-	end
-
-	vim.api.nvim_buf_set_lines(self.bufnr, -2, -1, false, _content)
-end
-
-function PopupWindow:prepare_tree()
-	-- vim.api.nvim_buf_set_lines(self.bufnr, -2, -1, false, content)
-	local node = {}
-	for _, key in ipairs(utils.sort_verse(self.lookup.book)) do
-		for ith, partial_verse in ipairs(self.lookup.book[key]) do
-			-- prepend verse number
-			local _line = { text = (partial_verse.versenum or "") .. "\t" .. (partial_verse.text or "") }
-			local _footnotes = {}
-			for tag, id in pairs(partial_verse.footnotes) do
-				table.insert(
-					_footnotes,
-					NuiTree.Node({
-						id = id,
-						is_footnote = true,
-					})
-				)
-			end
-
-			local _node
-			if not vim.tbl_isempty(_footnotes) then
-				_node = NuiTree.Node(_line, _footnotes)
-			else
-				_node = NuiTree.Node(_line)
-			end
-
-			-- table.insert(node, _node)
-			self.tree:add_node(_node)
-		end
-	end
-
-	-- toggle node
-	self:map("n", config.options.popup_window.keymaps.toggle, function()
-		local linenr = vim.api.nvim_win_get_cursor(self.winid)[1]
-		local _node = self.tree:get_node(linenr)
-		if _node:is_expanded() then
-			_node:collapse()
-		else
-			_node:expand()
-		end
-
-		self.tree:render()
-	end)
-end
-
-function PopupWindow:render()
-	-- vim.api.nvim_buf_set_option(self.bufnr, "modifiable", true)
-	-- vim.api.nvim_buf_set_lines(self.bufnr, 0, -1, false, {})
-	self.tree:render()
-end
-
 function PopupWindow:mount(opts)
 	opts = opts or {}
 	opts = vim.tbl_extend("force", self.opts, opts)
-	-- self:render_text(content)
-	self:prepare_tree()
 
 	PopupWindow.super.mount(self)
 
-	-- self:update_popup_size(opts)
-
 	-- close
-	local keys = config.options.popup_window.keymaps.close
+	local keys = config.options.view.keymaps.close
 	if type(keys) ~= "table" then
 		keys = { keys }
 	end
@@ -179,7 +91,7 @@ function PopupWindow:mount(opts)
 	end
 
 	-- accept output and replace
-	self:map("n", config.options.popup_window.keymaps.accept, function()
+	self:map("n", config.options.view.keymaps.accept, function()
 		local _lines = vim.api.nvim_buf_get_lines(self.bufnr, 0, -1, false)
 		-- vim.api.nvim_buf_set_text(
 		-- 	opts.main_bufnr,
@@ -193,7 +105,7 @@ function PopupWindow:mount(opts)
 	end)
 
 	-- accept output and prepend
-	self:map("n", config.options.popup_window.keymaps.prepend, function()
+	self:map("n", config.options.view.keymaps.prepend, function()
 		if opts.main_bufnr then
 			local _lines = vim.api.nvim_buf_get_lines(self.bufnr, 0, -1, false)
 			table.insert(_lines, "")
@@ -211,7 +123,7 @@ function PopupWindow:mount(opts)
 	end)
 
 	-- accept output and append
-	self:map("n", config.options.popup_window.keymaps.append, function()
+	self:map("n", config.options.view.keymaps.append, function()
 		if opts.main_bufnr then
 			local _lines = vim.api.nvim_buf_get_lines(self.bufnr, 0, -1, false)
 			table.insert(_lines, 1, "")
@@ -229,7 +141,7 @@ function PopupWindow:mount(opts)
 	end)
 
 	-- yank code in output and close
-	self:map("n", config.options.popup_window.keymaps.yank_code, function()
+	self:map("n", config.options.view.keymaps.yank_code, function()
 		local _lines = vim.api.nvim_buf_get_lines(self.bufnr, 0, -1, false)
 		local _code = _lines
 		vim.fn.setreg(config.options.yank_register, _code)
@@ -241,7 +153,7 @@ function PopupWindow:mount(opts)
 	end)
 
 	-- yank output and close
-	self:map("n", config.options.popup_window.keymaps.yank_to_register, function()
+	self:map("n", config.options.view.keymaps.yank_to_register, function()
 		local _lines = vim.api.nvim_buf_get_lines(self.bufnr, 0, -1, false)
 		vim.fn.setreg(Config.options.yank_register, _lines)
 

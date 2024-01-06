@@ -1,8 +1,10 @@
-local Popup = require("bible.popup")
+local Popup = require("bible.view.popup")
+local Split = require("bible.view.split")
 local Job = require("plenary.job")
 local classes = require("bible.common.classes")
 local config = require("bible.config")
 local utils = require("bible.utils")
+local Renderer = require("bible.renderer")
 
 local Lookup = classes.class()
 
@@ -10,7 +12,8 @@ function Lookup:init(opts)
 	self.opts = vim.tbl_extend("force", config.options.lookup_defaults, opts or {})
 	self.book = {}
 	self.ref = {}
-	self.popup = self:get_popup()
+	self.view = Split()
+	self.renderer = Renderer.new(self, self.view, opts)
 	self.cur_win = vim.api.nvim_get_current_win()
 end
 
@@ -71,7 +74,7 @@ end
 
 function Lookup:process_update()
 	-- vim.schedule_wrap(function()
-	self.popup:render()
+	self.renderer:render()
 	-- end)
 end
 
@@ -93,7 +96,7 @@ function Lookup:fetchVerse(opts)
 		},
 	}
 
-	self.popup:mount(popup_opts)
+	self.view:mount(popup_opts)
 
 	local response = self:curl(opts)
 
@@ -101,7 +104,7 @@ function Lookup:fetchVerse(opts)
 		on_exit = vim.schedule_wrap(function(j)
 			local json = vim.fn.json_decode(j:result()) or {}
 			self:extract_span_text(json)
-			self.popup:prepare_tree()
+			self.renderer:prepare_tree()
 			self:process_update()
 		end),
 	})
