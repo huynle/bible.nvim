@@ -9,20 +9,25 @@ end
 
 M.bibleLookup = function(opts)
 	opts = opts or {}
-	local lookup = Lookup.new(opts)
 	local _query = opts.query or vim.fn.input("query: ")
-	lookup:fetch_verse({
-		query = not utils.isempty(_query) and _query or nil,
-	})
+	local _queries = utils.split_and_join(_query, { split = "," }) or {}
+	for _, query in ipairs(_queries) do
+		local lookup = Lookup.new(opts)
+		lookup:fetch_verse({
+			query = not utils.isempty(query) and query or nil,
+		})
+	end
 end
 
 M.bibleLookupSelection = function(opts)
 	opts = opts or {}
 	local lookup = Lookup.new(opts)
-	local _queries = lookup:get_visual_selection()
+	local visual_selection = table.concat(lookup:get_visual_selection(), ", ")
+	local _queries = utils.split_and_join(visual_selection, { split = "," }) or {}
 	for _, query in ipairs(_queries) do
+		local lookup = Lookup.new(opts)
 		lookup:fetch_verse({
-			query = query,
+			query = not utils.isempty(query) and query or nil,
 		})
 	end
 end

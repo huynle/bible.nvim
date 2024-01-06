@@ -270,4 +270,24 @@ function M.isempty(s)
 	return s == nil or s == "" or s == "\r\27"
 end
 
+function M.split_and_join(val, opts)
+	opts = opts or {}
+	opts = vim.tbl_extend("force", {
+		-- split by all spaces and commas
+		split = "[%s%,]+",
+		join = nil,
+	}, opts)
+
+	local _vals = vim.split(val, opts.split)
+	local clean_vals = {}
+	for _, val in ipairs(_vals) do
+		table.insert(clean_vals, vim.fn.trim(val))
+	end
+
+	if opts.join then
+		return table.concat(clean_vals, opts.join)
+	end
+	return clean_vals
+end
+
 return M
