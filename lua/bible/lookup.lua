@@ -12,9 +12,34 @@ function Lookup:init(opts)
 	self.opts = vim.tbl_extend("force", config.options.lookup_defaults, opts or {})
 	self.book = {}
 	self.ref = {}
-	self.view = Split()
+	self.view = self:get_view(self.opts)
 	self.renderer = Renderer.new(self, self.view, opts)
 	self.cur_win = vim.api.nvim_get_current_win()
+end
+
+function Lookup:get_view(opts)
+	if opts.view == "split" then
+		return Split()
+	elseif opts.view == "below" then
+		return Split({
+			relative = "win",
+			position = "bottom",
+		})
+	elseif opts.view == "right" then
+		return Split({
+			relative = "editor",
+			position = "right",
+		})
+	elseif opts.view == "testing" then
+		return Split({
+			relative = {
+				type = "win",
+				winid = vim.api.nvim_get_current_win(),
+			},
+		})
+	else
+		return Popup()
+	end
 end
 
 function Lookup:get_bufnr()
@@ -72,13 +97,7 @@ function Lookup:form_URL(opts)
 	return uri .. "?" .. urlencode(params)
 end
 
-function Lookup:process_update()
-	-- vim.schedule_wrap(function()
-	self.renderer:render()
-	-- end)
-end
-
-function Lookup:fetchVerse(opts)
+function Lookup:fetch_verse(opts)
 	-- fetch the bible verse and extract only text
 	opts = vim.tbl_extend("force", self.opts, opts or {})
 
@@ -105,7 +124,7 @@ function Lookup:fetchVerse(opts)
 			local json = vim.fn.json_decode(j:result()) or {}
 			self:extract_span_text(json)
 			self.renderer:prepare_tree()
-			self:process_update()
+			self.renderer:render()
 		end),
 	})
 
@@ -126,7 +145,6 @@ function Lookup:add_footnote(html)
 						local _result = table.concat(j:result(), "")
 						local name = self.book[key][ith].footnotes[tag]
 						self.ref[name] = _result
-						-- self:process_update()
 					end),
 				})
 				_job:start()

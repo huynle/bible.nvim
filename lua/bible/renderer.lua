@@ -25,7 +25,7 @@ function Renderer:init(lookup, view, options)
 			if node.is_footnote then
 				line:append(self.lookup.ref[node.id] or node.id .. " not ready")
 			else
-				line:append((node.versenum or "") .. "\t\t" .. (node.text or ""))
+				line:append((node.versenum or "") .. "\t" .. (node.text or ""))
 			end
 			return line
 		end,

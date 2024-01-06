@@ -8,18 +8,20 @@ M.setup = function(options)
 end
 
 M.bibleLookup = function(opts)
+	opts = opts or {}
 	local lookup = Lookup.new(opts)
-	local _query = vim.fn.input("verse: ")
-	lookup:fetchVerse({
+	local _query = opts.query or vim.fn.input("query: ")
+	lookup:fetch_verse({
 		query = not utils.isempty(_query) and _query or nil,
 	})
 end
 
 M.bibleLookupSelection = function(opts)
+	opts = opts or {}
 	local lookup = Lookup.new(opts)
 	local _queries = lookup:get_visual_selection()
 	for _, query in ipairs(_queries) do
-		lookup:fetchVerse({
+		lookup:fetch_verse({
 			query = query,
 		})
 	end

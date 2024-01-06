@@ -6,13 +6,14 @@ local defaults = {
 	lookup_defaults = {
 		version = "NABRE",
 		query = "Genesis 1:1",
+		view = "split",
 	},
 	yank_register = "+",
 	view = {
 		enter = false,
 		buf_options = {
 			modifiable = false,
-			-- readonly = true,
+			readonly = true,
 		},
 		win_options = {
 			wrap = false,
@@ -21,7 +22,6 @@ local defaults = {
 			-- winhighlight = "Normal:Normal,FloatBorder:FloatBorder",
 			winhighlight = "Normal:Normal,FloatBorder:FloatBorder",
 		},
-
 		keymaps = {
 			close = { "<C-c>", "q" },
 			accept = "<c-y>",
@@ -33,7 +33,11 @@ local defaults = {
 		},
 	},
 	split_window = {
-		relative = "win",
+		-- relative = {
+		-- 	type = "win",
+		-- 	winid = "42",
+		-- },
+		relative = "editor",
 		position = "right",
 		size = "35%",
 		focusable = true,
