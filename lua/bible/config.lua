@@ -12,10 +12,11 @@ local defaults = {
 		position = 1,
 		padding = { 1, 1, 1, 1 },
 		size = {
-			width = "70%",
-			height = 10,
+			width = "50%",
+			-- height = 10,
+			height = "50%",
 		},
-		enter = true,
+		enter = false,
 		focusable = true,
 		zindex = 50,
 		relative = "cursor",
@@ -24,7 +25,7 @@ local defaults = {
 		},
 		buf_options = {
 			modifiable = false,
-			readonly = true,
+			-- readonly = true,
 		},
 		win_options = {
 			wrap = true,

@@ -9,6 +9,8 @@ local Lookup = classes.class()
 function Lookup:init(opts)
 	self.opts = vim.tbl_extend("force", config.options.lookup_defaults, opts or {})
 	self.book = {}
+	self.ref = {}
+	self.popup = self:get_popup()
 	self.cur_win = vim.api.nvim_get_current_win()
 end
 
@@ -67,65 +69,21 @@ function Lookup:form_URL(opts)
 	return uri .. "?" .. urlencode(params)
 end
 
+function Lookup:process_update()
+	-- vim.schedule_wrap(function()
+	self.popup:render()
+	-- end)
+end
+
 function Lookup:fetchVerse(opts)
 	-- fetch the bible verse and extract only text
 	opts = vim.tbl_extend("force", self.opts, opts or {})
 
-	local response = self:curl(opts)
-
-	local job1 = self:get_verse(response, {
-		on_exit = function(j, _, _)
-			vim.schedule(function()
-				local json = vim.fn.json_decode(j:result()) or {}
-				self:extract_span_text(json)
-				self:add_footnote(response)
-			end)
-		end,
-	})
-
-	-- local job2 = Bible.get_footnote(response, id, {
-	-- 	on_exit = function(j, _, _)
-	-- 		vim.schedule(function()
-	-- 			local _result = j:result()
-	-- 			local json = vim.fn.json_decode(_result) or {}
-	-- 			book = vim.tbl_extend("force", book, {})
-	-- 		end)
-	-- 	end,
-	-- })
-
-	job1:after(function(j, code, signal)
-		vim.schedule(function()
-			self:show_popup(opts.query)
-		end)
-	end)
-
-	-- Job.chain(job1, job2)
-	Job.chain(job1)
-end
-
-function Lookup:add_footnote(html)
-	for key, verse in pairs(self.book) do
-		for ith, partial_verse in ipairs(verse) do
-			for tag, id in pairs(partial_verse.footnotes) do
-				self:get_footnote(html, id, {
-					on_exit = function(j, _, _)
-						vim.schedule(function()
-							local _result = table.concat(j:result(), "")
-							self.book[key][ith].footnotes[tag] = _result
-						end)
-					end,
-				}):start()
-			end
-		end
-	end
-end
-
-function Lookup:show_popup(query)
 	local _, start_row, start_col, end_row, end_col = self:get_visual_selection()
 
-	local popup = Popup(self, {
+	local popup_opts = {
 		main_bufnr = self:get_bufnr(),
-		title = query,
+		title = opts.query,
 		cur_win = self.cur_win,
 		selection_idx = {
 			start_row = start_row,
@@ -133,9 +91,49 @@ function Lookup:show_popup(query)
 			end_row = end_row,
 			end_col = end_col,
 		},
+	}
+
+	self.popup:mount(popup_opts)
+
+	local response = self:curl(opts)
+
+	local _job = self:get_verse(response, {
+		on_exit = vim.schedule_wrap(function(j)
+			local json = vim.fn.json_decode(j:result()) or {}
+			self:extract_span_text(json)
+			self.popup:prepare_tree()
+			self:process_update()
+		end),
 	})
 
-	popup:mount()
+	_job:after(vim.schedule_wrap(function()
+		self:add_footnote(response)
+	end))
+
+	_job:start()
+end
+
+function Lookup:add_footnote(html)
+	-- asynchronously run in the back and get footnotes updated
+	for key, verse in pairs(self.book) do
+		for ith, partial_verse in ipairs(verse) do
+			for tag, id in pairs(partial_verse.footnotes) do
+				local _job = self:get_footnote(html, id, {
+					on_exit = vim.schedule_wrap(function(j, _, _)
+						local _result = table.concat(j:result(), "")
+						local name = self.book[key][ith].footnotes[tag]
+						self.ref[name] = _result
+						-- self:process_update()
+					end),
+				})
+				_job:start()
+			end
+		end
+	end
+end
+
+function Lookup:get_popup(query)
+	return Popup(self)
 end
 
 function Lookup:get_footnote(input, id, opts)
@@ -182,80 +180,6 @@ function Lookup:pup(query, prev_job, opts)
 		writer = prev_job,
 	}, opts or {})
 	return Job:new(opts)
-end
-
-function Lookup.encode(prev_job)
-	local _job = Job:new({
-		command = "python",
-		args = {
-			"-c",
-			[["import sys; print(sys.stdin.read().encode('utf-8'))"]],
-		},
-		writer = prev_job,
-		-- cwd = "/home/huy/go/bin",
-		-- on_exit = on_exit and vim.schedule_wrap(on_exit) or nil,
-	})
-	return _job
-end
-
-local function process_element(element, parent)
-	local output = {}
-	parent = parent or {}
-	-- if element.tag == "br" then
-	-- 	table.insert(output, "<br>")
-
-	local has_text, _ = string.find(element.class or "", "text")
-	local has_versenum, _ = string.find(element.class or "", "versenum")
-	local has_footnote, _ = string.find(element.class or "", "footnote")
-	if has_text ~= nil then
-		output.name = "text"
-	end
-
-	if has_versenum ~= nil then
-		output.name = "versenum"
-	end
-	if has_footnote ~= nil then
-		output.name = "footnote"
-	end
-
-	if element.text and element.href then
-		-- table.insert(output, element.text)
-		output.name = element.text
-		output.value = element.href
-	end
-
-	if element.text then
-		-- table.insert(output, element.text)
-		output.value = element.text
-	end
-
-	if element.href then
-		-- table.insert(output, element.text)
-		output.value = element.href
-	end
-
-	if element.children then
-		-- local _parent = process_element(element) -- process parent
-		-- vim.tbl_extend("force", _parent, output)
-		-- _parent.value = {}
-		-- output.children = {}
-		for _, child in ipairs(element.children) do
-			local _output = process_element(child, parent)
-			parent.value = _output
-			-- table.insert(output.children, ith, process_element(child))
-			-- vim.tbl_extend("force", output, _output)
-		end
-	end
-
-	return output
-end
-
-local function process_json(json_data)
-	local output = {}
-	for _, top_level_element in ipairs(json_data) do
-		vim.tbl_extend("force", output, process_element(top_level_element))
-	end
-	return table.concat(output)
 end
 
 -- 01/02/2024

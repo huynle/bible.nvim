@@ -2,6 +2,7 @@ local Popup = require("nui.popup")
 local config = require("bible.config")
 local event = require("nui.utils.autocmd").event
 local NuiTree = require("nui.tree")
+local NuiLine = require("nui.line")
 local utils = require("bible.utils")
 
 local PopupWindow = Popup:extend("PopupWindow")
@@ -10,8 +11,27 @@ function PopupWindow:init(lookup, options)
 	options = vim.tbl_deep_extend("keep", options or {}, config.options.popup_window)
 	self.opts = options
 	self.lookup = lookup
-
 	PopupWindow.super.init(self, options)
+
+	self.tree = NuiTree({
+		bufnr = self.bufnr,
+		nodes = {},
+		prepare_node = function(node)
+			local line = NuiLine()
+			line:append(string.rep("  ", node:get_depth() - 1))
+			if node:has_children() then
+				line:append(node:is_expanded() and " " or " ")
+			else
+				line:append("  ")
+			end
+			if node.is_footnote then
+				line:append(self.lookup.ref[node.id] or node.id .. " not ready")
+			else
+				line:append(node.text)
+			end
+			return line
+		end,
+	})
 end
 
 function PopupWindow:update_popup_size(opts)
@@ -84,16 +104,22 @@ function PopupWindow:render_text()
 	vim.api.nvim_buf_set_lines(self.bufnr, -2, -1, false, _content)
 end
 
-function PopupWindow:render_tree()
+function PopupWindow:prepare_tree()
 	-- vim.api.nvim_buf_set_lines(self.bufnr, -2, -1, false, content)
-	local nodes = {}
+	local node = {}
 	for _, key in ipairs(utils.sort_verse(self.lookup.book)) do
 		for ith, partial_verse in ipairs(self.lookup.book[key]) do
 			-- prepend verse number
 			local _line = { text = (partial_verse.versenum or "") .. "\t" .. (partial_verse.text or "") }
 			local _footnotes = {}
-			for tag, footnote in pairs(partial_verse.footnotes) do
-				table.insert(_footnotes, NuiTree.Node({ text = footnote }))
+			for tag, id in pairs(partial_verse.footnotes) do
+				table.insert(
+					_footnotes,
+					NuiTree.Node({
+						id = id,
+						is_footnote = true,
+					})
+				)
 			end
 
 			local _node
@@ -103,36 +129,36 @@ function PopupWindow:render_tree()
 				_node = NuiTree.Node(_line)
 			end
 
-			table.insert(nodes, _node)
+			-- table.insert(node, _node)
+			self.tree:add_node(_node)
 		end
 	end
-
-	local tree = NuiTree({
-		bufnr = self.bufnr,
-		nodes = nodes,
-	})
-
-	tree:render()
 
 	-- toggle node
 	self:map("n", config.options.popup_window.keymaps.toggle, function()
 		local linenr = vim.api.nvim_win_get_cursor(self.winid)[1]
-		local _node = tree:get_node(linenr)
+		local _node = self.tree:get_node(linenr)
 		if _node:is_expanded() then
 			_node:collapse()
 		else
 			_node:expand()
 		end
 
-		tree:render()
+		self.tree:render()
 	end)
+end
+
+function PopupWindow:render()
+	-- vim.api.nvim_buf_set_option(self.bufnr, "modifiable", true)
+	-- vim.api.nvim_buf_set_lines(self.bufnr, 0, -1, false, {})
+	self.tree:render()
 end
 
 function PopupWindow:mount(opts)
 	opts = opts or {}
 	opts = vim.tbl_extend("force", self.opts, opts)
 	-- self:render_text(content)
-	self:render_tree()
+	self:prepare_tree()
 
 	PopupWindow.super.mount(self)
 
