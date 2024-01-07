@@ -198,7 +198,8 @@ function M.is_array(t)
 end
 
 function M.isempty(s)
-	return s == nil or s == ""
+	-- when a visual selection is empty, it produces \r\27
+	return s == nil or s == "" or s == "\r\27" or s:match("^%s*$") ~= nil
 end
 
 function M.ternary(cond, T, F)
@@ -265,9 +266,47 @@ function M.sort_verse(myTable)
 	return sortedKeys
 end
 
-function M.isempty(s)
-	-- when a visual selection is empty, it produces \r\27
-	return s == nil or s == "" or s == "\r\27"
+function M.split_and_join(val, opts)
+	opts = opts or {}
+	opts = vim.tbl_extend("force", {
+		-- split by all spaces and commas
+		split = "[%s%,]+",
+		join = nil,
+	}, opts)
+
+	local _vals = vim.split(val, opts.split)
+	local clean_vals = {}
+	for _, val in ipairs(_vals) do
+		table.insert(clean_vals, vim.fn.trim(val))
+	end
+
+	if opts.join then
+		return table.concat(clean_vals, opts.join)
+	end
+	return clean_vals
+end
+
+function M.urlencode_value(value)
+	if type(value) == "table" then
+		local _value = {}
+		for _, item in ipairs(value) do
+			local _encoded = M._urlencode(item)
+			table.insert(_value, _encoded)
+		end
+		return table.concat(_value, "%%20")
+	else
+		return string.gsub(value, " ", "%%20") -- Encode spaces as %20
+	end
+end
+
+function M.urlencode(params)
+	local encoded_params = {}
+	for key, value in pairs(params) do
+		key = M.urlencode_value(key) -- Encode spaces as %20
+		value = M.urlencode_value(value) -- Encode spaces as %20
+		table.insert(encoded_params, key .. "=" .. value)
+	end
+	return table.concat(encoded_params, "&")
 end
 
 return M
