@@ -7,12 +7,19 @@ This project is **not affiliated with or approved by BibleGateway.com**. It aims
 alternative to the common practice of copying and pasting Bible text directly from
 BibleGateway.com's webpages into word processors.
 
+To clarify, this project is for personal use only and does not infringe on BibleGateway.com's
+copyright. The goal is to simplify the process of accessing the text-only version of the Bible,
+without any additional formatting or non-textual content that may be present on their webpages.
+
+As a reminder, it is essential to respect the intellectual property rights of others and always
+seek permission before reproducing or distributing copyrighted material. This project is intended
+as a tool for personal study and reflection and should not be used for commercial purposes.
+
 Please note that the web pages produced by BibleGateway.com contain a significant amount of
 non-textual content, with the actual Bible text constituting less than 5% of the page in most
 cases. The internal structure of the Bible text returned can vary significantly from version to
 version and may change without notice. Therefore, any oddities you might encounter could be due to
 such changes that I am not yet aware of.
-
 
 ## Requirement
 `pup` - https://github.com/ericchiang/pup. Have it in your system path.
