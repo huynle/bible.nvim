@@ -20,12 +20,18 @@ function Renderer:init(lookup, view, options)
 			if node:has_children() then
 				line:append(node:is_expanded() and " " or " ")
 			else
-				line:append("  ")
+				if self.lookup.opts.numbering then
+					line:append("  ")
+				end
 			end
 			if node.is_footnote then
 				line:append(self.lookup.ref[node.id] or node.id .. " not ready")
 			else
-				line:append((node.versenum or "") .. "\t" .. (node.text or ""))
+				if self.lookup.opts.numbering then
+					line:append((node.versenum or "") .. "\t" .. (node.text or ""))
+				else
+					line:append(node.text or "")
+				end
 			end
 			return line
 		end,
@@ -43,9 +49,10 @@ function Renderer:render_text()
 	vim.api.nvim_buf_set_lines(self.view.bufnr, -2, -1, false, _content)
 end
 
-function Renderer:prepare_tree()
+function Renderer:prepare_tree(opts)
+	opts = opts or {}
+	opts = vim.tbl_extend("force", self.lookup.opts, opts)
 	-- vim.api.nvim_buf_set_lines(self.bufnr, -2, -1, false, content)
-	local node = {}
 	for _, key in ipairs(utils.sort_verse(self.lookup.book)) do
 		for ith, partial_verse in ipairs(self.lookup.book[key]) do
 			-- prepend verse number
@@ -56,13 +63,15 @@ function Renderer:prepare_tree()
 			}
 			local _footnotes = {}
 			for tag, id in pairs(partial_verse.footnotes) do
-				table.insert(
-					_footnotes,
-					NuiTree.Node({
-						id = id,
-						is_footnote = true,
-					})
-				)
+				if opts.footnotes then
+					table.insert(
+						_footnotes,
+						NuiTree.Node({
+							id = id,
+							is_footnote = true,
+						})
+					)
+				end
 			end
 
 			local _node

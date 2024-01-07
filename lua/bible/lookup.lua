@@ -13,7 +13,7 @@ function Lookup:init(opts)
 	self.book = {}
 	self.ref = {}
 	self.view = self:get_view(self.opts)
-	self.renderer = Renderer.new(self, self.view, opts)
+	self.renderer = Renderer.new(self, self.view)
 	self.cur_win = vim.api.nvim_get_current_win()
 end
 
@@ -100,7 +100,7 @@ function Lookup:fetch_verse(opts)
 		on_exit = vim.schedule_wrap(function(j)
 			local json = vim.fn.json_decode(j:result()) or {}
 			self:extract_span_text(json)
-			self.renderer:prepare_tree()
+			self.renderer:prepare_tree(opts)
 			self.renderer:render()
 		end),
 	})

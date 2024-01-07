@@ -7,6 +7,8 @@ local defaults = {
 		version = "NABRE",
 		query = "Genesis 1:1",
 		view = "split",
+		numbering = true,
+		footnotes = true,
 	},
 	yank_register = "+",
 	view = {
@@ -22,6 +24,7 @@ local defaults = {
 			-- winhighlight = "Normal:Normal,FloatBorder:FloatBorder",
 			winhighlight = "Normal:Normal,FloatBorder:FloatBorder",
 		},
+
 		keymaps = {
 			close = { "<C-c>", "q" },
 			accept = "<c-y>",

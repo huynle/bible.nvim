@@ -81,6 +81,8 @@ lazy.nvim configuration
       version = "NABRE", -- any version that is available on  BibleGateway
       query = "Genesis 1:1", -- query can be split be commas, e.g. 'Gen 1:1, Jn 1:1'
       view = "split",  -- 'split', 'below', 'right'
+      numbering = true,
+      footnotes = true,
     }
   },
 }
