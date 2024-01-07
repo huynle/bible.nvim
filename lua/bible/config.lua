@@ -10,7 +10,7 @@ local defaults = {
 	},
 	yank_register = "+",
 	view = {
-		enter = false,
+		enter = true,
 		buf_options = {
 			modifiable = false,
 			readonly = true,

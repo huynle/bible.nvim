@@ -62,29 +62,6 @@ function Lookup:get_visual_selection()
 	return lines, start_row, start_col, end_row, end_col
 end
 
-local function _urlencode(value)
-	if type(value) == "table" then
-		local _value = {}
-		for _, item in ipairs(value) do
-			local _encoded = _urlencode(item)
-			table.insert(_value, _encoded)
-		end
-		return table.concat(_value, "%%20")
-	else
-		return string.gsub(value, " ", "%%20") -- Encode spaces as %20
-	end
-end
-
-local function urlencode(params)
-	local encoded_params = {}
-	for key, value in pairs(params) do
-		key = _urlencode(key) -- Encode spaces as %20
-		value = _urlencode(value) -- Encode spaces as %20
-		table.insert(encoded_params, key .. "=" .. value)
-	end
-	return table.concat(encoded_params, "&")
-end
-
 function Lookup:form_URL(opts)
 	opts = vim.tbl_extend("force", self.opts, opts or {})
 
@@ -92,9 +69,9 @@ function Lookup:form_URL(opts)
 	local params = {
 		interface = "print",
 		version = opts.version,
-		search = _urlencode(opts.query),
+		search = utils.urlencode_value(opts.query),
 	}
-	return uri .. "?" .. urlencode(params)
+	return uri .. "?" .. utils.urlencode(params)
 end
 
 function Lookup:fetch_verse(opts)
@@ -142,9 +119,14 @@ function Lookup:add_footnote(html)
 			for tag, id in pairs(partial_verse.footnotes) do
 				local _job = self:get_footnote(html, id, {
 					on_exit = vim.schedule_wrap(function(j, _, _)
-						local _result = table.concat(j:result(), "")
+						local _result = {}
+						for _, item in ipairs(j:result()) do
+							if not utils.isempty(item) then
+								table.insert(_result, item)
+							end
+						end
 						local name = self.book[key][ith].footnotes[tag]
-						self.ref[name] = _result
+						self.ref[name] = table.concat(_result, "")
 					end),
 				})
 				_job:start()
