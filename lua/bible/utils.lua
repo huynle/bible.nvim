@@ -198,19 +198,8 @@ function M.is_array(t)
 end
 
 function M.isempty(s)
-	return s == nil or s == ""
-end
-
-function M.istableempty(t)
-	local check = true
-	for _, v in pairs(t) do
-		if type(v) == "table" then
-			check = M.istableempty(v)
-		else
-			check = not v
-		end
-	end
-	return check
+	-- when a visual selection is empty, it produces \r\27
+	return s == nil or s == "" or s == "\r\27" or s:match("^%s*$") ~= nil
 end
 
 function M.ternary(cond, T, F)
@@ -248,6 +237,76 @@ function M.get_visual_lines(bufnr)
 	lines[1] = lines[1]:sub(start_col)
 
 	return lines, start_row, start_col, end_row, end_col
+end
+
+function M.compareVerseKeys(a, b)
+	local aBook, aChapter, aVerse = a:match("^(.-)%-(%d+)%-(%d+)$")
+	local bBook, bChapter, bVerse = b:match("^(.-)%-(%d+)%-(%d+)$")
+	aChapter = tonumber(aChapter)
+	bChapter = tonumber(bChapter)
+	aVerse = tonumber(aVerse)
+	bVerse = tonumber(bVerse)
+
+	if aBook ~= bBook then
+		return aBook < bBook
+	elseif aChapter ~= bChapter then
+		return aChapter < bChapter
+	else
+		return aVerse < bVerse
+	end
+end
+
+function M.sort_verse(myTable)
+	local sortedKeys = {}
+	for key, _ in pairs(myTable) do
+		table.insert(sortedKeys, key)
+	end
+
+	table.sort(sortedKeys, M.compareVerseKeys) -- Sorts the keys alphabetically
+	return sortedKeys
+end
+
+function M.split_and_join(val, opts)
+	opts = opts or {}
+	opts = vim.tbl_extend("force", {
+		-- split by all spaces and commas
+		split = "[%s%,]+",
+		join = nil,
+	}, opts)
+
+	local _vals = vim.split(val, opts.split)
+	local clean_vals = {}
+	for _, val in ipairs(_vals) do
+		table.insert(clean_vals, vim.fn.trim(val))
+	end
+
+	if opts.join then
+		return table.concat(clean_vals, opts.join)
+	end
+	return clean_vals
+end
+
+function M.urlencode_value(value)
+	if type(value) == "table" then
+		local _value = {}
+		for _, item in ipairs(value) do
+			local _encoded = M._urlencode(item)
+			table.insert(_value, _encoded)
+		end
+		return table.concat(_value, "%%20")
+	else
+		return string.gsub(value, " ", "%%20") -- Encode spaces as %20
+	end
+end
+
+function M.urlencode(params)
+	local encoded_params = {}
+	for key, value in pairs(params) do
+		key = M.urlencode_value(key) -- Encode spaces as %20
+		value = M.urlencode_value(value) -- Encode spaces as %20
+		table.insert(encoded_params, key .. "=" .. value)
+	end
+	return table.concat(encoded_params, "&")
 end
 
 return M
