@@ -56,6 +56,7 @@ function Renderer:prepare_tree(opts)
 	if opts.show_header then
 		local _surround = {
 			opts.show_header.surround,
+			opts.version,
 			opts.query,
 			opts.show_header.surround,
 		}
