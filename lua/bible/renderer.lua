@@ -52,6 +52,18 @@ end
 function Renderer:prepare_tree(opts)
 	opts = opts or {}
 	opts = vim.tbl_extend("force", self.lookup.opts, opts)
+
+	if opts.show_header then
+		local _surround = {
+			opts.show_header.surround,
+			opts.query,
+			opts.show_header.surround,
+		}
+
+		local _header = NuiTree.Node({ text = table.concat(_surround, " ") })
+		self.tree:add_node(_header)
+	end
+
 	-- vim.api.nvim_buf_set_lines(self.bufnr, -2, -1, false, content)
 	for _, key in ipairs(utils.sort_verse(self.lookup.book)) do
 		for ith, partial_verse in ipairs(self.lookup.book[key]) do

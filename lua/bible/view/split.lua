@@ -17,6 +17,7 @@ function SplitWindow:mount(opts)
 
 	SplitWindow.super.mount(self)
 	view_utils.do_keymap(self, opts)
+	view_utils.set_buf_options(self, opts)
 end
 
 return SplitWindow

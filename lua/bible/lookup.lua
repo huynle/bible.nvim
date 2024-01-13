@@ -98,10 +98,12 @@ function Lookup:fetch_verse(opts)
 
 	local _job = self:get_verse(response, {
 		on_exit = vim.schedule_wrap(function(j)
-			local json = vim.fn.json_decode(j:result()) or {}
-			self:extract_span_text(json)
-			self.renderer:prepare_tree(opts)
-			self.renderer:render()
+			local ok, json = pcall(vim.fn.json_decode, j:result())
+			if ok then
+				self:extract_span_text(json)
+				self.renderer:prepare_tree(opts)
+				self.renderer:render()
+			end
 		end),
 	})
 
