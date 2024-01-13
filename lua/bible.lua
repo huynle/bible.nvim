@@ -12,19 +12,23 @@ M._do = function(query, opts)
 	local _queries = utils.split_and_join(query, { split = "," }) or {}
 	for _, query in ipairs(_queries) do
 		-- if version is a table split it up
-		local versions = opts.version
-		if type(opts.version) == "string" then
-			versions = utils.split_and_join(opts.version, { split = "," }) or {}
-		end
-
-		for _, version in ipairs(versions) do
-			-- make sure the individual string in the version is not command separated either
-			local _versions = utils.split_and_join(version, { split = "," }) or {}
-
-			for _, _version in ipairs(_versions) do
-				local updated_opts = vim.tbl_extend("force", opts, { version = _version })
-				M.do_lookup(_query, updated_opts)
+		if opts.version then
+			local versions = opts.version
+			if type(opts.version) == "string" then
+				versions = utils.split_and_join(opts.version, { split = "," }) or {}
 			end
+
+			for _, version in ipairs(versions) do
+				-- make sure the individual string in the version is not command separated either
+				local _versions = utils.split_and_join(version, { split = "," }) or {}
+
+				for _, _version in ipairs(_versions) do
+					local updated_opts = vim.tbl_extend("force", opts, { version = _version })
+					M.do_lookup(query, updated_opts)
+				end
+			end
+		else
+			M.do_lookup(query, opts)
 		end
 	end
 end
