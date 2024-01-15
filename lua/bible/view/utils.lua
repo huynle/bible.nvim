@@ -18,6 +18,7 @@ function M.do_keymap(popup, opts)
 				opts.stop()
 			end
 			popup:unmount()
+			vim.cmd("q")
 		end)
 	end
 
