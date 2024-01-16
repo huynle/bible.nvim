@@ -49,7 +49,9 @@ end
 M.bibleLookupSelection = function(opts)
 	opts = opts or {}
 	local lookup = Lookup.new(opts)
-	local visual_selection = table.concat(lookup:get_visual_selection(), ", ")
+	-- local visual_selection = table.concat(lookup:get_visual_selection(), ", ")
+	local visual_selection = utils.extract_bible_verse(lookup:get_visual_selection())
+	-- local visual_selection = table.concat(lookup:get_visual_selection(), ", ")
 	M._do(visual_selection, opts)
 end
 
