@@ -16,11 +16,11 @@ function Renderer:init(lookup, view, options)
 		nodes = {},
 		prepare_node = function(node)
 			local line = NuiLine()
-			line:append(string.rep("  ", node:get_depth() - 1))
-			if node:has_children() then
-				line:append(node:is_expanded() and " " or " ")
-			else
-				if self.lookup.opts.numbering then
+			line:append(string.rep("\t\t", node:get_depth() - 1))
+			if self.lookup.opts.footnotes then
+				if node:has_children() then
+					line:append(node:is_expanded() and " " or " ")
+				else
 					line:append("  ")
 				end
 			end
@@ -28,7 +28,7 @@ function Renderer:init(lookup, view, options)
 				line:append(self.lookup.ref[node.id] or node.id .. " not ready")
 			else
 				if self.lookup.opts.numbering then
-					line:append((node.versenum or "") .. "\t" .. (node.text or ""))
+					line:append((node.versenum or "") .. "\t\t" .. (node.text or ""))
 				else
 					line:append(node.text or "")
 				end
@@ -52,6 +52,19 @@ end
 function Renderer:prepare_tree(opts)
 	opts = opts or {}
 	opts = vim.tbl_extend("force", self.lookup.opts, opts)
+
+	if opts.show_header then
+		local _surround = {
+			opts.show_header.surround,
+			opts.version,
+			opts.query,
+			opts.show_header.surround,
+		}
+
+		local _header = NuiTree.Node({ text = table.concat(_surround, " ") })
+		self.tree:add_node(_header)
+	end
+
 	-- vim.api.nvim_buf_set_lines(self.bufnr, -2, -1, false, content)
 	for _, key in ipairs(utils.sort_verse(self.lookup.book)) do
 		for ith, partial_verse in ipairs(self.lookup.book[key]) do
@@ -63,15 +76,13 @@ function Renderer:prepare_tree(opts)
 			}
 			local _footnotes = {}
 			for tag, id in pairs(partial_verse.footnotes) do
-				if opts.footnotes then
-					table.insert(
-						_footnotes,
-						NuiTree.Node({
-							id = id,
-							is_footnote = true,
-						})
-					)
-				end
+				table.insert(
+					_footnotes,
+					NuiTree.Node({
+						id = id,
+						is_footnote = true,
+					})
+				)
 			end
 
 			local _node

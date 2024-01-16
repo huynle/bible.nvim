@@ -309,4 +309,29 @@ function M.urlencode(params)
 	return table.concat(encoded_params, "&")
 end
 
+function M.extract_bible_verse(input_sentence)
+	local bible_references = {}
+	for _, text in ipairs(input_sentence) do
+		for reference in text:gmatch("(%d*%s*[A-Za-z]+%s*%d*:%d+%s*[;,]?)") do
+			table.insert(bible_references, reference)
+		end
+
+		-- Handle references with only chapter
+		for word, chapter in text:gmatch("(%w+)%s*([%d]+)%s*[,;]?") do
+			local reference = word .. " " .. chapter
+			local found = false
+			for _, previous_ref in ipairs(bible_references) do
+				if string.find(previous_ref, reference) then
+					found = true
+				end
+			end
+			if not found then
+				table.insert(bible_references, reference)
+			end
+		end
+	end
+
+	return table.concat(bible_references, ", ")
+end
+
 return M

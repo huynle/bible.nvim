@@ -2,6 +2,10 @@ local config = require("bible.config")
 local event = require("nui.utils.autocmd").event
 local M = {}
 
+function M.set_buf_options(popup, opts)
+	vim.api.nvim_buf_set_option(popup.bufnr, "filetype", "bible")
+end
+
 function M.do_keymap(popup, opts)
 	-- close
 	local keys = config.options.view.keymaps.close
@@ -14,6 +18,7 @@ function M.do_keymap(popup, opts)
 				opts.stop()
 			end
 			popup:unmount()
+			vim.cmd("q")
 		end)
 	end
 
