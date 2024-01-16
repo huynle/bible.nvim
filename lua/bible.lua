@@ -9,7 +9,7 @@ end
 
 M._do = function(query, opts)
 	-- split query by command, if there are any
-	local _queries = utils.split_and_join(query, { split = "," }) or {}
+	local _queries = utils.split_and_join(query, { split = ";" }) or {}
 	for _, query in ipairs(_queries) do
 		-- if version is a table split it up
 		if opts.version then
@@ -49,10 +49,9 @@ end
 M.bibleLookupSelection = function(opts)
 	opts = opts or {}
 	local lookup = Lookup.new(opts)
-	-- local visual_selection = table.concat(lookup:get_visual_selection(), ", ")
 	local visual_selection = utils.extract_bible_verse(lookup:get_visual_selection())
-	-- local visual_selection = table.concat(lookup:get_visual_selection(), ", ")
-	M._do(visual_selection, opts)
+	print("found: " .. visual_selection)
+	-- M._do(visual_selection, opts)
 end
 
 return M
