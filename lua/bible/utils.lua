@@ -330,10 +330,11 @@ function M.extract_bible_verse(input_sentence)
 		end
 		return bible_references
 	end
-
+	local _ref = {}
 	local bible_references = {}
 	for _, text in ipairs(input_sentence) do
 		text = do_unicode_to_utf(text)
+		table.insert(_ref, text)
 
 		for reference in text:gmatch("(%d*%s*[A-Za-z]+%s*%d*:%d+%s*[%-]%d+%s*[%-]?%s*%d*%s*[%d%,]*%s*%d*)") do
 			bible_references = do_append(bible_references, reference)
@@ -348,7 +349,11 @@ function M.extract_bible_verse(input_sentence)
 		end
 	end
 
-	return table.concat(bible_references, "; ")
+	if vim.tbl_isempty(bible_references) then
+		return table.concat(_ref, "; ")
+	else
+		return table.concat(bible_references, "; ")
+	end
 end
 
 function M.extract_bible_verse_og(input_sentence)
