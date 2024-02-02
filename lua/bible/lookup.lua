@@ -1,19 +1,19 @@
 local Popup = require("bible.view.popup")
 local Split = require("bible.view.split")
 local Job = require("plenary.job")
-local classes = require("bible.common.classes")
+local Object = require("bible.common.object")
 local config = require("bible.config")
 local utils = require("bible.utils")
 local Renderer = require("bible.renderer")
 
-local Lookup = classes.class()
+local Lookup = Object("Lookup")
 
 function Lookup:init(opts)
 	self.opts = vim.tbl_extend("force", config.options.lookup_defaults, opts or {})
 	self.book = {}
 	self.ref = {}
 	self.view = self:get_view(self.opts)
-	self.renderer = Renderer.new(self, self.view)
+	self.renderer = Renderer(self, self.view)
 	self.cur_win = vim.api.nvim_get_current_win()
 end
 

@@ -309,4 +309,80 @@ function M.urlencode(params)
 	return table.concat(encoded_params, "&")
 end
 
+function M.extract_bible_verse(input_sentence)
+	local function do_unicode_to_utf(text)
+		-- default hypens from biblegateway is not really the standar hypens
+		text = text:gsub("-", "-") -- default hypens used by biblegateway
+		text = text:gsub("–", "-") -- unicode hypens
+		text = text:gsub("[  ]", " ") -- break whitespaces, replace with standard space
+		text = text:gsub("[%s]+", " ") -- reduce number of spaces, to single space
+		return text
+	end
+	local function do_append(bible_references, reference)
+		local found = false
+		for _, previous_ref in ipairs(bible_references) do
+			if string.find(previous_ref, reference) then
+				found = true
+			end
+		end
+		if not found then
+			table.insert(bible_references, reference)
+		end
+		return bible_references
+	end
+	local _ref = {}
+	local bible_references = {}
+	for _, text in ipairs(input_sentence) do
+		text = do_unicode_to_utf(text)
+		table.insert(_ref, text)
+
+		for reference in text:gmatch("(%d*%s*[A-Z][a-z]+%s*%d*:%d+%s*[%-]%d+%s*[%-]?%s*%d*%s*[%d%,]*%s*%d*)") do
+			bible_references = do_append(bible_references, reference)
+		end
+
+		for reference in text:gmatch("(%d*%s*[A-Z][a-z]+%s*%d*:%d+%s*)") do
+			bible_references = do_append(bible_references, reference)
+		end
+
+		for reference in text:gmatch("([1-2]%s*[A-Z][a-z]+%s*%d*)") do
+			bible_references = do_append(bible_references, reference)
+		end
+
+		for reference in text:gmatch("([A-Z][a-z]+%s?%d%d?%d?)") do
+			bible_references = do_append(bible_references, reference)
+		end
+	end
+
+	if vim.tbl_isempty(bible_references) then
+		return table.concat(_ref, "; ")
+	else
+		return table.concat(bible_references, "; ")
+	end
+end
+
+function M.extract_bible_verse_og(input_sentence)
+	local bible_references = {}
+	for _, text in ipairs(input_sentence) do
+		for reference in text:gmatch("(%d*%s*[A-Za-z]+%s*%d*:%d+%s*)") do
+			table.insert(bible_references, reference)
+		end
+
+		-- Handle references with only chapter
+		for word, chapter in text:gmatch("(%w+)%s*([%d]+)%s*") do
+			local reference = word .. " " .. chapter
+			local found = false
+			for _, previous_ref in ipairs(bible_references) do
+				if string.find(previous_ref, reference) then
+					found = true
+				end
+			end
+			if not found then
+				table.insert(bible_references, reference)
+			end
+		end
+	end
+
+	return table.concat(bible_references, "; ")
+end
+
 return M

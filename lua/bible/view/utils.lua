@@ -18,6 +18,7 @@ function M.do_keymap(popup, opts)
 				opts.stop()
 			end
 			popup:unmount()
+			-- vim.cmd("q")
 		end)
 	end
 
@@ -32,7 +33,7 @@ function M.do_keymap(popup, opts)
 		-- 	opts.selection_idx.end_col,
 		-- 	opts.lines
 		-- )
-		vim.cmd("q")
+		-- vim.cmd("q")
 	end)
 
 	-- accept output and prepend
@@ -50,7 +51,7 @@ function M.do_keymap(popup, opts)
 				_lines
 			)
 		end
-		vim.cmd("q")
+		-- vim.cmd("q")
 	end)
 
 	-- accept output and append
@@ -68,7 +69,7 @@ function M.do_keymap(popup, opts)
 				_lines
 			)
 		end
-		vim.cmd("q")
+		-- vim.cmd("q")
 	end)
 
 	-- yank code in output and close
@@ -80,7 +81,7 @@ function M.do_keymap(popup, opts)
 		if vim.fn.mode() == "i" then
 			vim.api.nvim_command("stopinsert")
 		end
-		vim.cmd("q")
+		-- vim.cmd("q")
 	end)
 
 	-- yank output and close
@@ -91,7 +92,7 @@ function M.do_keymap(popup, opts)
 		if vim.fn.mode() == "i" then
 			vim.api.nvim_command("stopinsert")
 		end
-		vim.cmd("q")
+		-- vim.cmd("q")
 	end)
 
 	-- -- unmount component when cursor leaves buffer
