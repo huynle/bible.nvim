@@ -34,7 +34,7 @@ M._do = function(query, opts)
 end
 
 M.do_lookup = function(query, opts)
-	local lookup = Lookup.new(opts)
+	local lookup = Lookup(opts)
 	lookup:fetch_verse({
 		query = not utils.isempty(query) and query or nil,
 	})
@@ -48,7 +48,7 @@ end
 
 M.bibleLookupSelection = function(opts)
 	opts = opts or {}
-	local lookup = Lookup.new(opts)
+	local lookup = Lookup(opts)
 	local visual_selection = utils.extract_bible_verse(lookup:get_visual_selection())
 	M._do(visual_selection, opts)
 end

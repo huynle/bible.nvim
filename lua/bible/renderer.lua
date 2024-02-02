@@ -2,9 +2,9 @@ local config = require("bible.config")
 local NuiTree = require("nui.tree")
 local NuiLine = require("nui.line")
 local utils = require("bible.utils")
-local classes = require("bible.common.classes")
+local Object = require("bible.common.object")
 
-local Renderer = classes.class()
+local Renderer = Object("Renderer")
 
 function Renderer:init(lookup, view, options)
 	self.opts = options
