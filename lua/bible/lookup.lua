@@ -187,6 +187,25 @@ function Lookup:pup(query, prev_job, opts)
 	return Job:new(opts)
 end
 
+function Lookup:iconv(item)
+	if type(item) ~= "string" then
+		return item
+	end
+	item = item:gsub([[\u00A0]], "")
+	item = item:gsub([[&nbsp;]], " ")
+	item = item:gsub([[&amp;]], "&")
+	item = item:gsub([[“]], '"')
+	item = item:gsub([[”]], '"')
+	item = item:gsub([[‘]], "'")
+	item = item:gsub([[’]], "'")
+	item = item:gsub([[—]], "--")
+	item = item:gsub("Ã¢â‚¬â„¢", "'")
+	item = item:gsub("Ã¢â‚¬Ëœ", "'")
+	item = item:gsub("Ã¢â‚¬Å", "")
+	item = item:gsub("Ã¢â‚¬ï¿½", "")
+	return item
+end
+
 -- 01/02/2024
 function Lookup:extract_span_text(json, opts)
 	opts = opts or {
@@ -197,7 +216,7 @@ function Lookup:extract_span_text(json, opts)
 	for _, item in ipairs(json) do
 		local cur_versenum = item.class
 		local verse = {}
-		verse.text = item.text
+		verse.text = self:iconv(item.text)
 		verse.footnotes = {}
 		if item.children then
 			for _, child in ipairs(item.children) do
