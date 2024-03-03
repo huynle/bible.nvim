@@ -203,6 +203,7 @@ function Lookup:iconv(item)
 	item = item:gsub("Ã¢â‚¬Ëœ", "'")
 	item = item:gsub("Ã¢â‚¬Å", "")
 	item = item:gsub("Ã¢â‚¬ï¿½", "")
+	item = item:gsub("Ã¢â‚¬â€�", "—")
 	return item
 end
 
