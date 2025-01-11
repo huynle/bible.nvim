@@ -28,7 +28,8 @@ function Renderer:init(lookup, view, options)
 				line:append(self.lookup.ref[node.id] or node.id .. " not ready")
 			else
 				if self.lookup.opts.numbering then
-					line:append((node.versenum or "") .. "\t\t" .. (node.text or ""))
+					-- line:append((node.versenum or "") .. "\t\t" .. (node.text or ""))
+					line:append(string.format("%-4s%s", (node.versenum or ""), (node.text or "")))
 				else
 					line:append(node.text or "")
 				end
