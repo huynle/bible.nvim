@@ -68,7 +68,7 @@ function Lookup:form_URL(opts)
 	local uri = "https://www.biblegateway.com/passage/"
 	local params = {
 		interface = "print",
-		version = opts.version,
+		version = opts.versions[1],
 		search = utils.urlencode_value(opts.query),
 	}
 	return uri .. "?" .. utils.urlencode(params)

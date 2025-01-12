@@ -4,7 +4,7 @@ M.namespace = vim.api.nvim_create_namespace("Bible")
 
 local defaults = {
 	lookup_defaults = {
-		version = "NABRE",
+		versions = { "NABRE" },
 		query = "Genesis 1:1",
 		view = "split",
 		show_header = {

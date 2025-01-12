@@ -34,10 +34,19 @@ M._do = function(query, opts)
 end
 
 M.do_lookup = function(query, opts)
-	local lookup = Lookup(opts)
-	lookup:fetch_verse({
-		query = not utils.isempty(query) and query or nil,
-	})
+	opts = vim.tbl_extend("force", config.options.lookup_defaults, opts or {})
+
+	local versions = opts.versions
+	opts.versions = nil -- Remove versions from opts
+
+	for i = #versions, 1, -1 do
+		local version = versions[i]
+		local current_opts = vim.tbl_extend("force", opts, { versions = { version } })
+		local lookup = Lookup(current_opts)
+		lookup:fetch_verse({
+			query = not utils.isempty(query) and query or nil,
+		})
+	end
 end
 
 M.bibleLookup = function(opts)
