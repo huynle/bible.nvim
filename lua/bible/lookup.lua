@@ -99,9 +99,10 @@ function Lookup:fetch_verse(opts)
 
 	if cached_data then
 		-- Use cached data
-		self:extract_span_text(cached_data)
+		self:extract_span_text(cached_data.json)
 		self.renderer:prepare_tree(opts)
 		self.renderer:render()
+		self:add_footnote(cached_data.html)
 		return
 	end
 
@@ -112,8 +113,8 @@ function Lookup:fetch_verse(opts)
 		on_exit = vim.schedule_wrap(function(j)
 			local ok, json = pcall(vim.fn.json_decode, j:result())
 			if ok then
-				-- Cache the result
-				utils.write_cache(cache_file, json)
+				-- Cache both JSON and HTML
+				utils.write_cache(cache_file, json, response)
 
 				self:extract_span_text(json)
 				self.renderer:prepare_tree(opts)

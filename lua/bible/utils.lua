@@ -27,10 +27,14 @@ function M.read_cache(cache_file)
 	return nil
 end
 
-function M.write_cache(cache_file, data)
+function M.write_cache(cache_file, json, html)
 	local f = io.open(cache_file, "w")
 	if f then
-		f:write(vim.fn.json_encode(data))
+		local cache_data = {
+			json = json,
+			html = html,
+		}
+		f:write(vim.fn.json_encode(cache_data))
 		f:close()
 	end
 end
