@@ -3,6 +3,38 @@ local ESC_FEEDKEY = vim.api.nvim_replace_termcodes("<ESC>", true, false, true)
 
 local M = {}
 
+function M.get_cache_dir()
+	local cache_dir = vim.fn.expand("~/.local/share/nvim/bible")
+	if vim.fn.isdirectory(cache_dir) == 0 then
+		vim.fn.mkdir(cache_dir, "p")
+	end
+	return cache_dir
+end
+
+function M.get_cache_file(query, version)
+	local cache_dir = M.get_cache_dir()
+	local cache_key = string.format("%s_%s", query:gsub("[^%w]", "_"), version)
+	return string.format("%s/%s.json", cache_dir, cache_key)
+end
+
+function M.read_cache(cache_file)
+	local f = io.open(cache_file, "r")
+	if f then
+		local content = f:read("*all")
+		f:close()
+		return vim.fn.json_decode(content)
+	end
+	return nil
+end
+
+function M.write_cache(cache_file, data)
+	local f = io.open(cache_file, "w")
+	if f then
+		f:write(vim.fn.json_encode(data))
+		f:close()
+	end
+end
+
 function M.jump_to_item(win, precmd, item)
 	-- requiring here, as otherwise we run into a circular dependency
 	local View = require("bible.view")

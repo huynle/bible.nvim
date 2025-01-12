@@ -75,7 +75,6 @@ function Lookup:form_URL(opts)
 end
 
 function Lookup:fetch_verse(opts)
-	-- fetch the bible verse and extract only text
 	opts = vim.tbl_extend("force", self.opts, opts or {})
 
 	local _, start_row, start_col, end_row, end_col = self:get_visual_selection()
@@ -94,12 +93,28 @@ function Lookup:fetch_verse(opts)
 
 	self.view:mount(popup_opts)
 
+	-- Check cache first
+	local cache_file = utils.get_cache_file(opts.query, opts.versions[1])
+	local cached_data = utils.read_cache(cache_file)
+
+	if cached_data then
+		-- Use cached data
+		self:extract_span_text(cached_data)
+		self.renderer:prepare_tree(opts)
+		self.renderer:render()
+		return
+	end
+
+	-- If not cached, fetch from web
 	local response = self:curl(opts)
 
 	local _job = self:get_verse(response, {
 		on_exit = vim.schedule_wrap(function(j)
 			local ok, json = pcall(vim.fn.json_decode, j:result())
 			if ok then
+				-- Cache the result
+				utils.write_cache(cache_file, json)
+
 				self:extract_span_text(json)
 				self.renderer:prepare_tree(opts)
 				self.renderer:render()
