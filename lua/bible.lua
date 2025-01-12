@@ -7,7 +7,26 @@ M.setup = function(options)
 	config.setup(options)
 end
 
+M._close_windows = function(opts)
+	opts = vim.tbl_extend("force", config.options.view, opts or {})
+
+	-- Close all bible windows if reuse_window is true
+	if opts.clear_old_windows then
+		-- Get all windows
+		for _, win in ipairs(vim.api.nvim_list_wins()) do
+			-- Get buffer for each window
+			local buf = vim.api.nvim_win_get_buf(win)
+			-- Check if buffer's filetype is 'bible'
+			if vim.api.nvim_buf_get_option(buf, "filetype") == "bible" then
+				-- Close the window
+				vim.api.nvim_win_close(win, false)
+			end
+		end
+	end
+end
+
 M._do = function(query, opts)
+	M._close_windows(opts)
 	-- split query by command, if there are any
 	local _queries = utils.split_and_join(query, { split = ";" }) or {}
 	for _, query in ipairs(_queries) do

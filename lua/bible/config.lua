@@ -15,6 +15,7 @@ local defaults = {
 	},
 	yank_register = "+",
 	view = {
+		clear_old_windows = true,
 		enter = true,
 		buf_options = {
 			modifiable = false,
