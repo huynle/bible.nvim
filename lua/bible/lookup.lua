@@ -74,6 +74,12 @@ function Lookup:form_URL(opts)
 	return uri .. "?" .. utils.urlencode(params)
 end
 
+--- Fetches Bible verses either from cache or from the web.
+--- This function first checks if all requested verses are available in the cache.
+--- If any verse is missing, it fetches the entire passage from the web, updates
+--- the cache, and renders the verses in the view.
+---
+--- @param opts table Optional settings that override default options
 function Lookup:fetch_verse(opts)
 	opts = vim.tbl_extend("force", self.opts, opts or {})
 
@@ -93,45 +99,97 @@ function Lookup:fetch_verse(opts)
 
 	self.view:mount(popup_opts)
 
-	-- Check cache first
-	local cache_file = utils.get_cache_file(opts.query, opts.versions[1])
-	local cached_data = utils.read_cache(cache_file)
+	-- Parse query to get book, chapter, and verse
+	local book, chapter, verses = self:parse_reference(opts.query)
 
-	if cached_data then
-		-- Use cached data
-		self:extract_span_text(cached_data.json)
+	-- Check cache first
+	local cache_file = utils.get_cache_file()
+	local cache = utils.read_cache(cache_file)
+	local version = opts.versions[1]
+
+	-- Check if all verses exist in cache
+	local all_verses_cached = true
+	local cached_verses = {}
+
+	-- Verify each verse exists in cache
+	for _, verse_num in ipairs(verses) do
+		local cached_verse = utils.get_cached_verse(cache, version, book, chapter, verse_num)
+		if cached_verse then
+			cached_verses[verse_num] = cached_verse
+		else
+			all_verses_cached = false
+			break
+		end
+	end
+
+	if all_verses_cached then
+		-- Store all cached verses in self.book for the renderer to use
+		for verse_num, cached_verse in pairs(cached_verses) do
+			local verse_key = string.format("%s-%d-%d", book, chapter, verse_num)
+			self.book[verse_key] = {
+				{
+					text = cached_verse.text,
+					versenum = cached_verse.verse,
+					footnotes = cached_verse.footnotes or {}, -- Use cached footnotes
+				},
+			}
+			-- Store footnotes in self.ref for rendering
+			if cached_verse.footnotes then
+				for tag, footnote in pairs(cached_verse.footnotes) do
+					self.ref[footnote.id] = footnote.text
+				end
+			end
+		end
 		self.renderer:prepare_tree(opts)
 		self.renderer:render()
-		self:add_footnote(cached_data.html)
 		return
 	end
 
-	-- If not cached, fetch from web
+	-- If any verse is not cached, fetch from web
 	local response = self:curl(opts)
 
 	local _job = self:get_verse(response, {
 		on_exit = vim.schedule_wrap(function(j)
 			local ok, json = pcall(vim.fn.json_decode, j:result())
 			if ok then
-				-- Cache both JSON and HTML
-				utils.write_cache(cache_file, json, response)
+				-- Extract and cache verse data
+				local verse_data = self:extract_span_text(json)
+				utils.cache_verse_data(cache, version, book, chapter, verse_data)
 
-				self:extract_span_text(json)
+				-- Store the verse data in self.book for the renderer to use
+				for _, data in ipairs(verse_data) do
+					local verse_key = string.format("%s-%d-%d", book, data.chapter, data.verse)
+					self.book[verse_key] = {
+						{
+							text = data.text,
+							versenum = data.verse,
+							footnotes = data.footnotes or {}, -- Include footnotes
+						},
+					}
+				end
+				utils.write_cache(cache_file, cache)
+
+				-- Update footnotes in cache after they're fetched
+				self:add_footnote(response)
+
 				self.renderer:prepare_tree(opts)
 				self.renderer:render()
 			end
 		end),
 	})
 
-	_job:after(vim.schedule_wrap(function()
-		self:add_footnote(response)
-	end))
-
 	_job:start()
 end
 
+--- Asynchronously fetches and caches footnotes for Bible verses.
+--- This function processes footnotes for each verse in the book, fetches the footnote content,
+--- and stores it in the cache for future use.
+--- @param html table The HTML content containing the footnotes
 function Lookup:add_footnote(html)
-	-- asynchronously run in the back and get footnotes updated
+	local cache_file = utils.get_cache_file()
+	local cache = utils.read_cache(cache_file)
+
+	-- Asynchronously run in the background and get footnotes updated
 	for key, verse in pairs(self.book) do
 		for ith, partial_verse in ipairs(verse) do
 			for tag, id in pairs(partial_verse.footnotes) do
@@ -143,8 +201,19 @@ function Lookup:add_footnote(html)
 								table.insert(_result, item)
 							end
 						end
-						local name = self.book[key][ith].footnotes[tag]
-						self.ref[name] = table.concat(_result, "")
+
+						-- Get the footnote ID
+						local footnote_id = self.book[key][ith].footnotes[tag]
+						local footnote_text = table.concat(_result, "")
+
+						-- Update the footnote text in the cache
+						utils.update_footnote_text(cache, footnote_id, footnote_text)
+
+						-- Write the updated cache back to file
+						utils.write_cache(cache_file, cache)
+
+						-- Also update self.ref for immediate use in the current session
+						self.ref[footnote_id] = footnote_text
 					end),
 				})
 				_job:start()
@@ -223,38 +292,139 @@ function Lookup:iconv(item)
 	return item
 end
 
--- 01/02/2024
-function Lookup:extract_span_text(json, opts)
-	opts = opts or {
-		delimiter = "\n",
-	}
-	local _book = {}
+-- Parse a Bible reference string into its components.
+-- @param query string: A Bible reference in the format "Book Chapter:Verse" or "Book Chapter:Verse-Verse"
+--   Examples:
+--     - "Genesis 1:1"
+--     - "Ecclesiastes 2:1-10"
+--     - "Ecclesiastes 2:1-10, 11, 13-20"
+-- @return string: The book name
+-- @return number: The chapter number
+-- @return table: A list of verse numbers
+function Lookup:parse_reference(query)
+	-- Extract book and chapter
+	local book, chapter, verses = query:match("([%w%s]+)%s*(%d+):(.+)")
 
-	for _, item in ipairs(json) do
-		local cur_versenum = item.class
-		local verse = {}
-		verse.text = self:iconv(item.text)
-		verse.footnotes = {}
-		if item.children then
-			for _, child in ipairs(item.children) do
-				if child.class == "versenum" then
-					verse.versenum = child.text
+	-- Initialize verses table
+	local verse_list = {}
+
+	-- Split verses by comma
+	for verse_range in verses:gmatch("[^,]+") do
+		-- Trim whitespace
+		verse_range = verse_range:match("^%s*(.-)%s*$")
+
+		-- Check if it's a range (contains hyphen)
+		local start_verse, end_verse = verse_range:match("(%d+)-(%d+)")
+		if start_verse and end_verse then
+			-- Add all verses in the range
+			for v = tonumber(start_verse), tonumber(end_verse) do
+				table.insert(verse_list, v)
+			end
+		else
+			-- Single verse
+			local single_verse = tonumber(verse_range)
+			if single_verse then
+				table.insert(verse_list, single_verse)
+			end
+		end
+	end
+
+	return book, tonumber(chapter), verse_list
+end
+
+-- Updated extract_span_text function
+function Lookup:extract_span_text_og(json)
+	-- Modify this function to return structured verse data
+	local verse_data = {
+		verse = json.verse,
+		text = json.text,
+		reference = json.reference,
+		-- Add other relevant fields you want to cache
+	}
+	return verse_data
+end
+
+function Lookup:extract_span_text(json)
+	local verses = {}
+	local current_chapter = nil
+
+	for _, entry in ipairs(json) do
+		local verse_data = {
+			verse = nil,
+			text = "",
+			reference = "",
+			chapter = nil,
+			footnotes = {}, -- Initialize footnotes for each verse
+		}
+
+		-- Check for chapter number
+		if entry.children then
+			for _, child in ipairs(entry.children) do
+				if child.class == "chapternum" then
+					current_chapter = tonumber(child.text)
 				end
+			end
+		end
+
+		-- Extract verse information
+		if entry.class and entry.class:match("text%s+[%w%-]+%-(%d+)%-(%d+)") then
+			local chapter, verse = entry.class:match("text%s+[%w%-]+%-(%d+)%-(%d+)")
+			verse_data.verse = tonumber(verse)
+			verse_data.chapter = tonumber(chapter)
+			verse_data.reference = entry.class:match("text%s+([%w%-]+%-%d+%-%d+)")
+		end
+
+		-- Extract text content and footnotes
+		if entry.text then
+			verse_data.text = verse_data.text .. self:iconv(entry.text)
+		end
+
+		-- Process nested children if they exist
+		if entry.children then
+			for _, child in ipairs(entry.children) do
+				if child.text and child.class ~= "chapternum" and child.class ~= "versenum" then
+					verse_data.text = verse_data.text .. self:iconv(child.text)
+				end
+
+				-- Extract footnote information
 				if child.class == "footnote" then
-					for _, _item in ipairs(child.children) do
-						verse.footnotes[_item.text] = _item.href
+					local footnote_tag = child.text:match("%[(.-)%]")
+					if footnote_tag and child["data-fn"] then
+						-- Store the footnote reference
+						verse_data.footnotes[footnote_tag] = child["data-fn"]
 					end
 				end
 			end
 		end
 
-		-- verse.verse = cur_versenum
-		if not _book[cur_versenum] then
-			_book[cur_versenum] = {}
+		-- Clean up the text
+		verse_data.text = verse_data.text:gsub("%s+", " "):match("^%s*(.-)%s*$")
+
+		-- Add chapter information if available
+		if current_chapter then
+			verse_data.chapter = current_chapter
 		end
-		table.insert(_book[cur_versenum], verse)
+
+		-- Only add verse_data if it has a verse number and text
+		if verse_data.verse and verse_data.text ~= "" then
+			-- Create the verse key in self.book
+			local verse_key =
+				string.format("%s-%d-%d", verse_data.reference:match("([%w%-]+)"), verse_data.chapter, verse_data.verse)
+
+			-- Store the verse data in self.book
+			self.book[verse_key] = {
+				{
+					text = verse_data.text,
+					versenum = verse_data.verse,
+					footnotes = verse_data.footnotes,
+				},
+			}
+
+			table.insert(verses, verse_data)
+		end
 	end
-	self.book = vim.tbl_extend("force", self.book, _book)
+
+	return verses
 end
 
 return Lookup

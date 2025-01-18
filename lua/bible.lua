@@ -8,7 +8,7 @@ M.setup = function(options)
 end
 
 M._close_windows = function(opts)
-	opts = vim.tbl_extend("force", config.options.view, opts or {})
+	opts = vim.tbl_extend("force", config.options.lookup_defaults, opts or {})
 
 	-- Close all bible windows if reuse_window is true
 	if opts.clear_old_windows then

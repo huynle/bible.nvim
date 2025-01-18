@@ -12,10 +12,10 @@ local defaults = {
 		},
 		numbering = true,
 		footnotes = true,
+		clear_old_windows = true,
 	},
 	yank_register = "+",
 	view = {
-		clear_old_windows = true,
 		enter = true,
 		buf_options = {
 			modifiable = false,

@@ -3,40 +3,142 @@ local ESC_FEEDKEY = vim.api.nvim_replace_termcodes("<ESC>", true, false, true)
 
 local M = {}
 
-function M.get_cache_dir()
-	local cache_dir = vim.fn.expand("~/.local/share/nvim/bible")
-	if vim.fn.isdirectory(cache_dir) == 0 then
-		vim.fn.mkdir(cache_dir, "p")
+function M.create_cache_structure()
+	return {
+		versions = {}, -- Will store different Bible versions
+		footnotes = {}, -- Will store footnotes referenced in verses
+	}
+end
+
+function M.get_cache_file()
+	local cache_file = vim.fn.stdpath("data") .. "/bible_lookup_cache.json"
+
+	-- Check if file exists
+	if vim.fn.filereadable(cache_file) == 0 then
+		-- Create new cache structure
+		local new_cache = M.create_cache_structure()
+
+		-- Convert to JSON
+		local json_data = vim.fn.json_encode(new_cache)
+
+		-- Write to file
+		vim.fn.writefile({ json_data }, cache_file)
 	end
-	return cache_dir
+
+	return cache_file
 end
 
-function M.get_cache_file(query, version)
-	local cache_dir = M.get_cache_dir()
-	local cache_key = string.format("%s_%s", query:gsub("[^%w]", "_"), version)
-	return string.format("%s/%s.json", cache_dir, cache_key)
-end
-
+--- Reads and parses the Bible lookup cache from the specified file.
+-- If the file doesn't exist or can't be parsed, returns a new cache structure.
+-- @param cache_file string Path to the cache file
+-- @return table Cache data structure or new cache if read fails
 function M.read_cache(cache_file)
-	local f = io.open(cache_file, "r")
-	if f then
-		local content = f:read("*all")
-		f:close()
-		return vim.fn.json_decode(content)
+	if vim.fn.filereadable(cache_file) == 1 then
+		local content = vim.fn.readfile(cache_file)
+		local ok, cache = pcall(vim.fn.json_decode, table.concat(content, "\n"))
+		if ok then
+			return cache
+		end
+	end
+	return M.create_cache_structure()
+end
+
+--- Writes the Bible lookup cache data to the specified file in JSON format.
+-- @param cache_file string Path to the cache file
+-- @param cache_data table Data to be cached
+function M.write_cache(cache_file, cache_data)
+	local encoded = vim.fn.json_encode(cache_data)
+	vim.fn.writefile({ encoded }, cache_file)
+end
+
+--- Stores verse data in the cache structure, creating necessary nested tables if they don't exist.
+-- @param cache table The cache structure
+-- @param version string Bible version identifier
+-- @param book string Book name
+-- @param chapter string|number Chapter number
+-- @param verse_data table Verse data to be cached
+function M.cache_verse_data(cache, version, book, chapter, verse_data)
+	-- Initialize version if not exists
+	if not cache.versions[version] then
+		cache.versions[version] = {}
+	end
+
+	-- Initialize book if not exists
+	if not cache.versions[version][book] then
+		cache.versions[version][book] = {}
+	end
+
+	-- Initialize chapter if not exists
+	if not cache.versions[version][book][chapter] then
+		cache.versions[version][book][chapter] = {}
+	end
+
+	-- Cache each verse data item
+	for _, data in ipairs(verse_data) do
+		-- Store the verse data using the verse number as key
+		cache.versions[version][book][chapter][data.verse] = {
+			verse = data.verse,
+			text = data.text,
+			reference = data.reference,
+			chapter = data.chapter,
+			footnotes = data.footnotes or {}, -- Store footnotes
+		}
+
+		-- Store footnotes in the global footnotes section
+		for tag, footnote_id in pairs(data.footnotes or {}) do
+			if not cache.footnotes[footnote_id] then
+				cache.footnotes[footnote_id] = {
+					id = footnote_id,
+					text = "", -- This will be populated by add_footnote
+					references = {}, -- Track which verses reference this footnote
+				}
+			end
+			-- Add reference to this verse
+			table.insert(cache.footnotes[footnote_id].references, {
+				version = version,
+				book = book,
+				chapter = chapter,
+				verse = data.verse,
+				tag = tag,
+			})
+		end
+	end
+end
+
+function M.update_footnote_text(cache, footnote_id, text)
+	if cache.footnotes[footnote_id] then
+		cache.footnotes[footnote_id].text = text
+	end
+end
+
+--- Retrieves cached verse data if it exists.
+-- @param cache table The cache structure
+-- @param version string Bible version identifier
+-- @param book string Book name
+-- @param chapter string|number Chapter number
+-- @param verse string|number Verse number
+-- @return table|nil Returns the verse data if found, nil otherwise
+function M.get_cached_verse(cache, version, book, chapter, verse)
+	local verse_data = cache.versions[version]
+		and cache.versions[version][book]
+		and cache.versions[version][book][chapter]
+		and cache.versions[version][book][chapter][verse]
+
+	if verse_data then
+		-- If the verse has footnotes, get their full text from the footnotes cache
+		local footnotes = {}
+		for tag, footnote_id in pairs(verse_data.footnotes or {}) do
+			if cache.footnotes[footnote_id] then
+				footnotes[tag] = {
+					id = footnote_id,
+					text = cache.footnotes[footnote_id].text,
+				}
+			end
+		end
+		verse_data.footnotes = footnotes
+		return verse_data
 	end
 	return nil
-end
-
-function M.write_cache(cache_file, json, html)
-	local f = io.open(cache_file, "w")
-	if f then
-		local cache_data = {
-			json = json,
-			html = html,
-		}
-		f:write(vim.fn.json_encode(cache_data))
-		f:close()
-	end
 end
 
 function M.jump_to_item(win, precmd, item)
