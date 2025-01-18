@@ -80,7 +80,7 @@ function Renderer:prepare_tree(opts)
 				table.insert(
 					_footnotes,
 					NuiTree.Node({
-						id = id.id,
+						id = id.id or id,
 						is_footnote = true,
 					})
 				)

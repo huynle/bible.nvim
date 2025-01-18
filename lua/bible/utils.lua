@@ -57,6 +57,16 @@ end
 -- @param book string Book name
 -- @param chapter string|number Chapter number
 -- @param verse_data table Verse data to be cached
+--- Stores verse data in the cache structure, creating necessary nested tables if they don't exist.
+-- This function handles three cases:
+-- 1. Specific verses: "Genesis 1:1-3" (stores individual verses)
+-- 2. Entire chapter: "Genesis 1" (stores all verses in the chapter)
+-- 3. Entire book: "Genesis" (stores all chapters and verses)
+-- @param cache table The cache structure
+-- @param version string Bible version identifier
+-- @param book string Book name
+-- @param chapter string|number|nil Chapter number (nil if entire book)
+-- @param verse_data table Verse data to be cached
 function M.cache_verse_data(cache, version, book, chapter, verse_data)
 	-- Initialize version if not exists
 	if not cache.versions[version] then
@@ -68,15 +78,22 @@ function M.cache_verse_data(cache, version, book, chapter, verse_data)
 		cache.versions[version][book] = {}
 	end
 
-	-- Initialize chapter if not exists
-	if not cache.versions[version][book][chapter] then
-		cache.versions[version][book][chapter] = {}
+	-- If chapter is specified, initialize it
+	if chapter then
+		if not cache.versions[version][book][chapter] then
+			cache.versions[version][book][chapter] = {}
+		end
 	end
 
 	-- Cache each verse data item
 	for _, data in ipairs(verse_data) do
+		-- Ensure the chapter exists for this verse
+		if not cache.versions[version][book][data.chapter] then
+			cache.versions[version][book][data.chapter] = {}
+		end
+
 		-- Store the verse data using the verse number as key
-		cache.versions[version][book][chapter][data.verse] = {
+		cache.versions[version][book][data.chapter][data.verse] = {
 			verse = data.verse,
 			text = data.text,
 			reference = data.reference,
@@ -97,7 +114,7 @@ function M.cache_verse_data(cache, version, book, chapter, verse_data)
 			table.insert(cache.footnotes[footnote_id].references, {
 				version = version,
 				book = book,
-				chapter = chapter,
+				chapter = data.chapter,
 				verse = data.verse,
 				tag = tag,
 			})

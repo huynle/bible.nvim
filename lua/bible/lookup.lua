@@ -102,6 +102,10 @@ function Lookup:fetch_verse(opts)
 	-- Parse query to get book, chapter, and verse
 	local book, chapter, verses = self:parse_reference(opts.query)
 
+	-- If no verses specified but chapter is specified, fetch all verses in chapter
+	-- If no chapter specified, fetch entire book
+	-- This will be handled by the web request, as BibleGateway supports this format
+
 	-- Check cache first
 	local cache_file = utils.get_cache_file()
 	local cache = utils.read_cache(cache_file)
@@ -111,41 +115,44 @@ function Lookup:fetch_verse(opts)
 	local all_verses_cached = true
 	local cached_verses = {}
 
-	-- Verify each verse exists in cache
-	for _, verse_num in ipairs(verses) do
-		local cached_verse = utils.get_cached_verse(cache, version, book, chapter, verse_num)
-		if cached_verse then
-			cached_verses[verse_num] = cached_verse
-		else
-			all_verses_cached = false
-			break
-		end
-	end
-
-	if all_verses_cached then
-		-- Store all cached verses in self.book for the renderer to use
-		for verse_num, cached_verse in pairs(cached_verses) do
-			local verse_key = string.format("%s-%d-%d", book, chapter, verse_num)
-			self.book[verse_key] = {
-				{
-					text = cached_verse.text,
-					versenum = cached_verse.verse,
-					footnotes = cached_verse.footnotes or {}, -- Use cached footnotes
-				},
-			}
-			-- Store footnotes in self.ref for rendering
-			if cached_verse.footnotes then
-				for tag, footnote in pairs(cached_verse.footnotes) do
-					self.ref[footnote.id] = footnote.text
-				end
+	-- Only check cache if specific verses were requested
+	if #verses > 0 then
+		-- Verify each verse exists in cache
+		for _, verse_num in ipairs(verses) do
+			local cached_verse = utils.get_cached_verse(cache, version, book, chapter, verse_num)
+			if cached_verse then
+				cached_verses[verse_num] = cached_verse
+			else
+				all_verses_cached = false
+				break
 			end
 		end
-		self.renderer:prepare_tree(opts)
-		self.renderer:render()
-		return
+
+		if all_verses_cached then
+			-- Store all cached verses in self.book for the renderer to use
+			for verse_num, cached_verse in pairs(cached_verses) do
+				local verse_key = string.format("%s-%d-%d", book, chapter, verse_num)
+				self.book[verse_key] = {
+					{
+						text = cached_verse.text,
+						versenum = cached_verse.verse,
+						footnotes = cached_verse.footnotes or {}, -- Use cached footnotes
+					},
+				}
+				-- Store footnotes in self.ref for rendering
+				if cached_verse.footnotes then
+					for tag, footnote in pairs(cached_verse.footnotes) do
+						self.ref[footnote.id] = footnote.text
+					end
+				end
+			end
+			self.renderer:prepare_tree(opts)
+			self.renderer:render()
+			return
+		end
 	end
 
-	-- If any verse is not cached, fetch from web
+	-- If any verse is not cached or if no specific verses were requested, fetch from web
 	local response = self:curl(opts)
 
 	local _job = self:get_verse(response, {
@@ -297,39 +304,158 @@ end
 --   Examples:
 --     - "Genesis 1:1"
 --     - "Ecclesiastes 2:1-10"
---     - "Ecclesiastes 2:1-10, 11, 13-20"
+--     - "Ecclesiastes 2:1-10, 11, 13-20"\
+--
+-- Based on the context, this is part of a Bible reference parsing function, and for consistency in handling book names, you'd want to use standardized abbreviations. Here's a common way to represent Ecclesiastes and other Bible books using standard abbreviations:
+--
+-- For Ecclesiastes specifically, the standard abbreviations are:
+-- - Eccl
+-- - Ecc
+-- - Ec
+--
+-- For a complete standardized system, here are the common abbreviations for all Bible books:
+--
+-- Old Testament:
+-- Gen, Ex, Lev, Num, Deut, Josh, Judg, Ruth, 1Sam, 2Sam, 1Kgs, 2Kgs, 1Chr, 2Chr, Ezra, Neh, Est, Job, Ps, Prov, Eccl, Song, Isa, Jer, Lam, Ezek, Dan, Hos, Joel, Amos, Obad, Jon, Mic, Nah, Hab, Zeph, Hag, Zech, Mal
+--
+-- New Testament:
+-- Matt, Mark, Luke, John, Acts, Rom, 1Cor, 2Cor, Gal, Eph, Phil, Col, 1Thess, 2Thess, 1Tim, 2Tim, Titus, Phlm, Heb, Jas, 1Pet, 2Pet, 1John, 2John, 3John, Jude, Rev
+--
+-- These abbreviations are widely recognized and would be appropriate to use in the `book` variable of the parsing function.
+--
 -- @return string: The book name
 -- @return number: The chapter number
 -- @return table: A list of verse numbers
 function Lookup:parse_reference(query)
-	-- Extract book and chapter
+	-- Try to match full reference (book chapter:verses)
 	local book, chapter, verses = query:match("([%w%s]+)%s*(%d+):(.+)")
+
+	if not book then
+		-- Try to match book and chapter only
+		book, chapter = query:match("([%w%s]+)%s*(%d+)")
+	end
+
+	if not book then
+		-- Try to match book only
+		book = query:match("([%w%s]+)")
+	end
+
+	-- Standardize book names
+	local book_mappings = {
+		-- Old Testament
+		["Genesis"] = "Gen",
+		["Exodus"] = "Ex",
+		["Leviticus"] = "Lev",
+		["Numbers"] = "Num",
+		["Deuteronomy"] = "Deut",
+		["Joshua"] = "Josh",
+		["Judges"] = "Judg",
+		["Ruth"] = "Ruth",
+		["1 Samuel"] = "1Sam",
+		["2 Samuel"] = "2Sam",
+		["1 Kings"] = "1Kgs",
+		["2 Kings"] = "2Kgs",
+		["1 Chronicles"] = "1Chr",
+		["2 Chronicles"] = "2Chr",
+		["Ezra"] = "Ezra",
+		["Nehemiah"] = "Neh",
+		["Esther"] = "Est",
+		["Job"] = "Job",
+		["Psalms"] = "Ps",
+		["Psalm"] = "Ps",
+		["Proverbs"] = "Prov",
+		["Ecclesiastes"] = "Eccl",
+		["Song of Solomon"] = "Song",
+		["Song of Songs"] = "Song",
+		["Isaiah"] = "Isa",
+		["Jeremiah"] = "Jer",
+		["Lamentations"] = "Lam",
+		["Ezekiel"] = "Ezek",
+		["Daniel"] = "Dan",
+		["Hosea"] = "Hos",
+		["Joel"] = "Joel",
+		["Amos"] = "Amos",
+		["Obadiah"] = "Obad",
+		["Jonah"] = "Jon",
+		["Micah"] = "Mic",
+		["Nahum"] = "Nah",
+		["Habakkuk"] = "Hab",
+		["Zephaniah"] = "Zeph",
+		["Haggai"] = "Hag",
+		["Zechariah"] = "Zech",
+		["Malachi"] = "Mal",
+		-- New Testament
+		["Matthew"] = "Matt",
+		["Mark"] = "Mark",
+		["Luke"] = "Luke",
+		["John"] = "John",
+		["Acts"] = "Acts",
+		["Romans"] = "Rom",
+		["1 Corinthians"] = "1Cor",
+		["2 Corinthians"] = "2Cor",
+		["Galatians"] = "Gal",
+		["Ephesians"] = "Eph",
+		["Philippians"] = "Phil",
+		["Colossians"] = "Col",
+		["1 Thessalonians"] = "1Thess",
+		["2 Thessalonians"] = "2Thess",
+		["1 Timothy"] = "1Tim",
+		["2 Timothy"] = "2Tim",
+		["Titus"] = "Titus",
+		["Philemon"] = "Phlm",
+		["Hebrews"] = "Heb",
+		["James"] = "Jas",
+		["1 Peter"] = "1Pet",
+		["2 Peter"] = "2Pet",
+		["1 John"] = "1John",
+		["2 John"] = "2John",
+		["3 John"] = "3John",
+		["Jude"] = "Jude",
+		["Revelation"] = "Rev",
+		["Revelations"] = "Rev",
+	}
+
+	-- Clean and standardize the book name
+	if book then
+		book = book:match("^%s*(.-)%s*$") -- Trim whitespace
+		book = book:gsub("^(%d)%s+", "%1 ") -- Standardize spacing after numbers
+		book = book:gsub("(%a)(%d)", "%1 %2") -- Add space between letter and number
+
+		-- Convert to title case for consistent lookup
+		book = book:gsub("^%l", string.upper):gsub("%s+%l", string.upper)
+
+		-- Look up the standardized abbreviation
+		book = book_mappings[book] or book
+	end
 
 	-- Initialize verses table
 	local verse_list = {}
 
-	-- Split verses by comma
-	for verse_range in verses:gmatch("[^,]+") do
-		-- Trim whitespace
-		verse_range = verse_range:match("^%s*(.-)%s*$")
+	-- Only process verses if they were provided
+	if verses then
+		-- Split verses by comma
+		for verse_range in verses:gmatch("[^,]+") do
+			-- Trim whitespace
+			verse_range = verse_range:match("^%s*(.-)%s*$")
 
-		-- Check if it's a range (contains hyphen)
-		local start_verse, end_verse = verse_range:match("(%d+)-(%d+)")
-		if start_verse and end_verse then
-			-- Add all verses in the range
-			for v = tonumber(start_verse), tonumber(end_verse) do
-				table.insert(verse_list, v)
-			end
-		else
-			-- Single verse
-			local single_verse = tonumber(verse_range)
-			if single_verse then
-				table.insert(verse_list, single_verse)
+			-- Check if it's a range (contains hyphen)
+			local start_verse, end_verse = verse_range:match("(%d+)-(%d+)")
+			if start_verse and end_verse then
+				-- Add all verses in the range
+				for v = tonumber(start_verse), tonumber(end_verse) do
+					table.insert(verse_list, v)
+				end
+			else
+				-- Single verse
+				local single_verse = tonumber(verse_range)
+				if single_verse then
+					table.insert(verse_list, single_verse)
+				end
 			end
 		end
 	end
 
-	return book, tonumber(chapter), verse_list
+	return book, chapter and tonumber(chapter) or nil, verse_list
 end
 
 -- Updated extract_span_text function
@@ -382,7 +508,13 @@ function Lookup:extract_span_text(json)
 		-- Process nested children if they exist
 		if entry.children then
 			for _, child in ipairs(entry.children) do
-				if child.text and child.class ~= "chapternum" and child.class ~= "versenum" then
+				if
+					child.text
+					and child.class ~= "chapternum"
+					and child.class ~= "versenum"
+					and child.class ~= "crossreference"
+					and child.class ~= "footnote"
+				then
 					verse_data.text = verse_data.text .. self:iconv(child.text)
 				end
 
@@ -411,14 +543,14 @@ function Lookup:extract_span_text(json)
 			local verse_key =
 				string.format("%s-%d-%d", verse_data.reference:match("([%w%-]+)"), verse_data.chapter, verse_data.verse)
 
-			-- Store the verse data in self.book
-			self.book[verse_key] = {
-				{
-					text = verse_data.text,
-					versenum = verse_data.verse,
-					footnotes = verse_data.footnotes,
-				},
-			}
+			-- -- Store the verse data in self.book
+			-- self.book[verse_key] = {
+			-- 	{
+			-- 		text = verse_data.text,
+			-- 		versenum = verse_data.verse,
+			-- 		footnotes = verse_data.footnotes,
+			-- 	},
+			-- }
 
 			table.insert(verses, verse_data)
 		end
