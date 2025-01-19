@@ -503,8 +503,10 @@ function Lookup:extract_span_text(json)
 
 			-- Create new verse_data for new verse
 			if new_verse or not current_verse_data then
+				-- Set verse to 0 if entry.text contains "Chapter", otherwise use the parsed verse number
+				local verse_num = (entry.text and entry.text:match("Chapter")) and 0 or tonumber(verse)
 				current_verse_data = {
-					verse = tonumber(verse),
+					verse = verse_num,
 					text = {}, -- Initialize as empty table instead of empty string
 					reference = entry.class:match("text%s+([%w%-]+%-%d+%-%d+)"),
 					chapter = tonumber(chapter),

@@ -52,21 +52,17 @@ function M.write_cache(cache_file, cache_data)
 end
 
 --- Stores verse data in the cache structure, creating necessary nested tables if they don't exist.
--- @param cache table The cache structure
--- @param version string Bible version identifier
--- @param book string Book name
--- @param chapter string|number Chapter number
--- @param verse_data table Verse data to be cached
---- Stores verse data in the cache structure, creating necessary nested tables if they don't exist.
--- This function handles three cases:
--- 1. Specific verses: "Genesis 1:1-3" (stores individual verses)
--- 2. Entire chapter: "Genesis 1" (stores all verses in the chapter)
--- 3. Entire book: "Genesis" (stores all chapters and verses)
--- @param cache table The cache structure
--- @param version string Bible version identifier
--- @param book string Book name
--- @param chapter string|number|nil Chapter number (nil if entire book)
--- @param verse_data table Verse data to be cached
+--- This function handles the following cases:
+--- 1. Specific verses: "Genesis 1:1-3" (stores individual verses)
+--- 2. Entire chapter: "Genesis 1" (stores all verses in the chapter)
+--- 3. Entire book: "Genesis" (stores all chapters and verses)
+--- 4. Chapter headers: Stores verse "0" as chapter header text
+---
+--- @param cache table The cache structure
+--- @param version string Bible version identifier
+--- @param book string Book name
+--- @param chapter string|number|nil Chapter number (nil if entire book)
+--- @param verse_data table Verse data to be cached
 function M.cache_verse_data(cache, version, book, chapter, verse_data)
 	-- Initialize version if not exists
 	if not cache.versions[version] then
@@ -92,10 +88,13 @@ function M.cache_verse_data(cache, version, book, chapter, verse_data)
 			cache.versions[version][book][data.chapter] = {}
 		end
 
+		-- Convert verse number to string to handle verse "0" (chapter headers)
+		local verse_key = tostring(data.verse)
+
 		-- Store the verse data using the verse number as key
-		cache.versions[version][book][data.chapter][data.verse] = {
+		cache.versions[version][book][data.chapter][verse_key] = {
 			verse = data.verse,
-			text = data.text,
+			text = type(data.text) == "table" and table.concat(data.text, "") or data.text,
 			reference = data.reference,
 			chapter = data.chapter,
 			footnotes = data.footnotes or {}, -- Store footnotes
@@ -115,13 +114,17 @@ function M.cache_verse_data(cache, version, book, chapter, verse_data)
 				version = version,
 				book = book,
 				chapter = data.chapter,
-				verse = data.verse,
+				verse = verse_key,
 				tag = tag,
 			})
 		end
 	end
 end
 
+--- Updates the footnote text in the cache.
+--- @param cache table The cache structure
+--- @param footnote_id string The ID of the footnote to update
+--- @param text string The text content of the footnote
 function M.update_footnote_text(cache, footnote_id, text)
 	if cache.footnotes[footnote_id] then
 		cache.footnotes[footnote_id].text = text
@@ -129,17 +132,20 @@ function M.update_footnote_text(cache, footnote_id, text)
 end
 
 --- Retrieves cached verse data if it exists.
--- @param cache table The cache structure
--- @param version string Bible version identifier
--- @param book string Book name
--- @param chapter string|number Chapter number
--- @param verse string|number Verse number
--- @return table|nil Returns the verse data if found, nil otherwise
+--- @param cache table The cache structure
+--- @param version string Bible version identifier
+--- @param book string Book name
+--- @param chapter string|number Chapter number
+--- @param verse string|number Verse number
+--- @return table|nil Returns the verse data if found, nil otherwise
 function M.get_cached_verse(cache, version, book, chapter, verse)
+	-- Convert verse to string to handle verse "0" (chapter headers)
+	local verse_key = tostring(verse)
+
 	local verse_data = cache.versions[version]
 		and cache.versions[version][book]
 		and cache.versions[version][book][chapter]
-		and cache.versions[version][book][chapter][verse]
+		and cache.versions[version][book][chapter][verse_key]
 
 	if verse_data then
 		-- If the verse has footnotes, get their full text from the footnotes cache

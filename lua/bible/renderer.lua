@@ -85,8 +85,8 @@ function Renderer:prepare_tree(opts)
 			for i, line in ipairs(text_lines) do
 				local _line = {
 					text = line,
-					-- Only show verse number for the first line
-					versenum = (i == 1) and partial_verse.versenum or "",
+					-- Only show verse number for the first line and when it's not "0"
+					versenum = (i == 1 and partial_verse.versenum ~= 0) and partial_verse.versenum or "",
 					is_verse = true,
 				}
 
