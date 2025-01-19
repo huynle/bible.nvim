@@ -207,16 +207,13 @@ function Lookup:add_footnote(html)
 							if not utils.isempty(item) then
 								-- First trim whitespace
 								local trimmed = item:match("^%s*(.-)%s*$")
-								-- Then check if it's not in the format "digits:digits"
-								if trimmed and not trimmed:match("^%d+:%d+$") then
-									table.insert(_result, trimmed)
-								end
+								table.insert(_result, trimmed)
 							end
 						end
 
 						-- Get the footnote ID
 						local footnote_id = self.book[key][ith].footnotes[tag]
-						local footnote_text = table.concat(_result, "")
+						local footnote_text = table.concat(_result, " ")
 
 						-- Update the footnote text in the cache
 						utils.update_footnote_text(cache, footnote_id, footnote_text)
