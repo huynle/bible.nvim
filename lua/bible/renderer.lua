@@ -50,10 +50,16 @@ function Renderer:render_text()
 	vim.api.nvim_buf_set_lines(self.view.bufnr, -2, -1, false, _content)
 end
 
+--- Prepares the tree structure for rendering Bible verses with support for multiline text.
+--- This function creates a tree structure where each verse can have multiple lines of text,
+--- with verse numbers shown only on the first line. It also handles footnotes and header display.
+---
+--- @param opts table Optional settings that override default options
 function Renderer:prepare_tree(opts)
 	opts = opts or {}
 	opts = vim.tbl_extend("force", self.lookup.opts, opts)
 
+	-- Add header if specified
 	if opts.show_header then
 		local _surround = {
 			opts.show_header.surround,
@@ -66,39 +72,52 @@ function Renderer:prepare_tree(opts)
 		self.tree:add_node(_header)
 	end
 
-	-- vim.api.nvim_buf_set_lines(self.bufnr, -2, -1, false, content)
+	-- Process verses
 	for _, key in ipairs(utils.sort_verse(self.lookup.book)) do
 		for ith, partial_verse in ipairs(self.lookup.book[key]) do
-			-- prepend verse number
-			local _line = {
-				text = partial_verse.text,
-				versenum = partial_verse.versenum,
-				is_verse = true,
-			}
-			local _footnotes = {}
-			for tag, id in pairs(partial_verse.footnotes) do
-				table.insert(
-					_footnotes,
-					NuiTree.Node({
-						id = id.id or id,
-						is_footnote = true,
-					})
-				)
+			-- Handle multiline text
+			local text_lines = partial_verse.text
+			if type(text_lines) == "string" then
+				text_lines = { text_lines } -- Convert single string to table
 			end
 
-			local _node
-			if not vim.tbl_isempty(_footnotes) then
-				_node = NuiTree.Node(_line, _footnotes)
-			else
-				_node = NuiTree.Node(_line)
-			end
+			-- Create nodes for each line of text
+			for i, line in ipairs(text_lines) do
+				local _line = {
+					text = line,
+					-- Only show verse number for the first line
+					versenum = (i == 1) and partial_verse.versenum or "",
+					is_verse = true,
+				}
 
-			-- table.insert(node, _node)
-			self.tree:add_node(_node)
+				-- Process footnotes (only for the first line)
+				local _footnotes = {}
+				if i == 1 then
+					for tag, id in pairs(partial_verse.footnotes) do
+						table.insert(
+							_footnotes,
+							NuiTree.Node({
+								id = id.id or id,
+								is_footnote = true,
+							})
+						)
+					end
+				end
+
+				-- Create node with or without footnotes
+				local _node
+				if not vim.tbl_isempty(_footnotes) then
+					_node = NuiTree.Node(_line, _footnotes)
+				else
+					_node = NuiTree.Node(_line)
+				end
+
+				self.tree:add_node(_node)
+			end
 		end
 	end
 
-	-- toggle node
+	-- Set up toggle node functionality
 	self.view:map("n", config.options.view.keymaps.toggle, function()
 		local linenr = vim.api.nvim_win_get_cursor(self.view.winid)[1]
 		local _node = self.tree:get_node(linenr)

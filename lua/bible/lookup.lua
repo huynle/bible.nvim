@@ -473,16 +473,9 @@ end
 function Lookup:extract_span_text(json)
 	local verses = {}
 	local current_chapter = nil
+	local current_verse_data = nil
 
 	for _, entry in ipairs(json) do
-		local verse_data = {
-			verse = nil,
-			text = "",
-			reference = "",
-			chapter = nil,
-			footnotes = {}, -- Initialize footnotes for each verse
-		}
-
 		-- Check for chapter number
 		if entry.children then
 			for _, child in ipairs(entry.children) do
@@ -493,67 +486,77 @@ function Lookup:extract_span_text(json)
 		end
 
 		-- Extract verse information
+		local new_verse = false
 		if entry.class and entry.class:match("text%s+[%w%-]+%-(%d+)%-(%d+)") then
 			local chapter, verse = entry.class:match("text%s+[%w%-]+%-(%d+)%-(%d+)")
-			verse_data.verse = tonumber(verse)
-			verse_data.chapter = tonumber(chapter)
-			verse_data.reference = entry.class:match("text%s+([%w%-]+%-%d+%-%d+)")
-		end
 
-		-- Extract text content and footnotes
-		if entry.text then
-			verse_data.text = verse_data.text .. self:iconv(entry.text)
-		end
-
-		-- Process nested children if they exist
-		if entry.children then
-			for _, child in ipairs(entry.children) do
-				if
-					child.text
-					and child.class ~= "chapternum"
-					and child.class ~= "versenum"
-					and child.class ~= "crossreference"
-					and child.class ~= "footnote"
-				then
-					verse_data.text = verse_data.text .. self:iconv(child.text)
+			-- If we find a new verse, save the previous one (if exists) and create new verse_data
+			if
+				current_verse_data
+				and (current_verse_data.verse ~= tonumber(verse) or current_verse_data.chapter ~= tonumber(chapter))
+			then
+				if #current_verse_data.text > 0 then
+					table.insert(verses, current_verse_data)
 				end
+				new_verse = true
+			end
 
-				-- Extract footnote information
-				if child.class == "footnote" then
-					local footnote_tag = child.text:match("%[(.-)%]")
-					if footnote_tag and child["data-fn"] then
-						-- Store the footnote reference
-						verse_data.footnotes[footnote_tag] = child["data-fn"]
+			-- Create new verse_data for new verse
+			if new_verse or not current_verse_data then
+				current_verse_data = {
+					verse = tonumber(verse),
+					text = {}, -- Initialize as empty table instead of empty string
+					reference = entry.class:match("text%s+([%w%-]+%-%d+%-%d+)"),
+					chapter = tonumber(chapter),
+					footnotes = {},
+				}
+			end
+		end
+
+		-- Extract text content
+		if current_verse_data then
+			if entry.text then
+				table.insert(current_verse_data.text, self:iconv(entry.text))
+			end
+
+			-- Process nested children if they exist
+			if entry.children then
+				for _, child in ipairs(entry.children) do
+					if
+						child.text
+						and child.class ~= "chapternum"
+						and child.class ~= "versenum"
+						and child.class ~= "crossreference"
+						and child.class ~= "footnote"
+					then
+						table.insert(current_verse_data.text, self:iconv(child.text))
+					end
+
+					-- Extract footnote information
+					if child.class == "footnote" then
+						local footnote_tag = child.text:match("%[(.-)%]")
+						if footnote_tag and child["data-fn"] then
+							current_verse_data.footnotes[footnote_tag] = child["data-fn"]
+						end
 					end
 				end
 			end
 		end
+	end
 
-		-- Clean up the text
-		verse_data.text = verse_data.text:gsub("%s+", " "):match("^%s*(.-)%s*$")
+	-- Add the last verse if it exists
+	if current_verse_data and #current_verse_data.text > 0 then
+		-- Clean up each text entry
+		for i, text in ipairs(current_verse_data.text) do
+			current_verse_data.text[i] = text:gsub("%s+", " "):match("^%s*(.-)%s*$")
+		end
 
 		-- Add chapter information if available
 		if current_chapter then
-			verse_data.chapter = current_chapter
+			current_verse_data.chapter = current_chapter
 		end
 
-		-- Only add verse_data if it has a verse number and text
-		if verse_data.verse and verse_data.text ~= "" then
-			-- Create the verse key in self.book
-			local verse_key =
-				string.format("%s-%d-%d", verse_data.reference:match("([%w%-]+)"), verse_data.chapter, verse_data.verse)
-
-			-- -- Store the verse data in self.book
-			-- self.book[verse_key] = {
-			-- 	{
-			-- 		text = verse_data.text,
-			-- 		versenum = verse_data.verse,
-			-- 		footnotes = verse_data.footnotes,
-			-- 	},
-			-- }
-
-			table.insert(verses, verse_data)
-		end
+		table.insert(verses, current_verse_data)
 	end
 
 	return verses
