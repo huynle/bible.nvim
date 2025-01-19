@@ -205,7 +205,12 @@ function Lookup:add_footnote(html)
 						local _result = {}
 						for _, item in ipairs(j:result()) do
 							if not utils.isempty(item) then
-								table.insert(_result, item)
+								-- First trim whitespace
+								local trimmed = item:match("^%s*(.-)%s*$")
+								-- Then check if it's not in the format "digits:digits"
+								if trimmed and not trimmed:match("^%d+:%d+$") then
+									table.insert(_result, trimmed)
+								end
 							end
 						end
 
